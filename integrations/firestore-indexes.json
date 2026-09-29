@@ -1,0 +1,9 @@
+{
+  "collectionGroup": "healthPartnerResults",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "partnerUid", "order": "ASCENDING" },
+    { "fieldPath": "status", "order": "ASCENDING" },
+    { "fieldPath": "__name__", "order": "ASCENDING" }
+  ]
+}

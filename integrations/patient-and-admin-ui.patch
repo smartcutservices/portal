@@ -1,0 +1,130 @@
+diff --git a/health-espace.html b/health-espace.html
+index 36721c9..a4880b6 100644
+--- a/health-espace.html
++++ b/health-espace.html
+@@ -10,6 +10,6 @@
+      page de contenu — aucun des autres dashboards prestataires n'affiche ce pied de page
+      non plus. -->
+ <body data-health-view="space"><div id="health-header-root"></div><main id="health-root"><div class="health-boot"><i class="fas fa-circle-notch fa-spin"></i> Ouverture de votre espace…</div></main>
+-<script type="module">import './firebase-init.js'; const mount=async(id,loader,options={})=>{const root=document.getElementById(id);if(!root)return;try{const mod=await loader();new mod.default(id,options)}catch(error){console.error(`Erreur ${id}:`,error)}};mount('health-header-root',()=>import('./health-header.js?v=20260914-1'));mount('health-root',()=>import('./health.js?v=20260929-2'),{view:'space'});</script>
++<script type="module">import './firebase-init.js'; const mount=async(id,loader,options={})=>{const root=document.getElementById(id);if(!root)return;try{const mod=await loader();new mod.default(id,options)}catch(error){console.error(`Erreur ${id}:`,error)}};mount('health-header-root',()=>import('./health-header.js?v=20260929-2'));mount('health-root',()=>import('./health.js?v=20260929-3'),{view:'space'});</script>
+ </body></html>
+
+diff --git a/health-header.js b/health-header.js
+index ef6b562..9f21b54 100644
+--- a/health-header.js
++++ b/health-header.js
+@@ -26,6 +26,7 @@ const NAV_LINKS = [
+   { href: './health-teleconsultation.html', label: 'Téléconsultation', icon: 'fa-user-doctor', match: ['health-teleconsultation.html'], audience: 'user' },
+   { href: './health-imagerie.html', label: 'Imagerie', icon: 'fa-x-ray', match: ['health-imagerie.html'], audience: 'user' },
+   { href: './health-laboratoires.html', label: 'Laboratoires', match: ['health-laboratoires.html'], audience: 'user' },
++  { href: './health-partner-results.html', label: 'Partenaires Résultats', icon: 'fa-file-medical', match: ['health-partner-results.html'], audience: 'admin' },
+   { href: './health-medecins.html', label: 'Médecins', match: ['health-medecins.html'], audience: 'doctor' },
+   { href: './health-candidature.html', label: 'Devenir médecin', icon: 'fa-user-plus', match: ['health-candidature.html'], audience: 'prospect' },
+ ];
+@@ -100,6 +101,18 @@ export default class SmartCutHealthHeader {
+               catch (_) { /* photo pas encore disponible (émulateur, propagation) : on retombe sur celle du compte */ }
+             }
+           } catch (_) { /* lecture impossible : on reste sur la vue utilisateur */ }
++          if (!isAdmin) {
++            try {
++              const platformRoleSnap = await getDoc(doc(db, 'platformRoles', user.uid));
++              const platformRole = platformRoleSnap.exists() ? (platformRoleSnap.data() || {}) : {};
++              const platformRoleName = String(platformRole.role || '').toLowerCase();
++              const permissions = Array.isArray(platformRole.permissions) ? platformRole.permissions : [];
++              isAdmin = String(platformRole.status || '').toLowerCase() === 'active' && (
++                ['super_admin', 'platform_admin', 'health_laboratory_admin', 'health_imaging_admin', 'admin_orders'].includes(platformRoleName)
++                || permissions.some((permission) => ['*', 'health.partner-results.*', 'partner-results.*', 'lab.orders.read', 'lab.orders.write', 'imaging.results.read', 'imaging.results.write'].includes(permission))
++              );
++            } catch (_) { /* Le portail reste protégé côté serveur; lien caché si le rôle est illisible. */ }
++          }
+         }
+         const roleChanged = role !== this.role || isAdmin !== this.isAdmin;
+         this.role = role;
+diff --git a/health.js b/health.js
+index 8811fc0..a0677f2 100644
+--- a/health.js
++++ b/health.js
+@@ -42,6 +42,21 @@ async function callHealth(name, { method = 'GET', query: search, body, requireAu
+   return payload;
+ }
+
++async function callHealthResultPages(name) {
++  const results = [];
++  const seenCursors = new Set();
++  let cursor = '';
++  while (true) {
++    const page = await callHealth(name, { requireAuth: true, query: cursor ? { cursor } : {} });
++    results.push(...(Array.isArray(page.results) ? page.results : []));
++    if (!page.hasMore) return results;
++    const nextCursor = String(page.nextCursor || '');
++    if (!nextCursor || seenCursors.has(nextCursor)) throw new Error('La pagination des résultats est invalide. Actualisez la page ou contactez le support.');
++    seenCursors.add(nextCursor);
++    cursor = nextCursor;
++  }
++}
++
+ class SmartCutHealth {
+   constructor(rootId, options = {}) {
+     this.root = document.getElementById(rootId);
+@@ -891,36 +906,45 @@ class SmartCutHealth {
+     if (!root || !this.user) return;
+     root.innerHTML = '<div class="health-empty"><i class="fas fa-circle-notch fa-spin"></i>Chargement de vos résultats…</div>';
+     try {
+-      const [labResponse, imagingResponse] = await Promise.all([
+-        callHealth('healthListLabResults', { requireAuth: true }),
+-        callHealth('healthListImagingResults', { requireAuth: true })
++      const [labResultsPage, imagingResultsPage, partnerResultsPage] = await Promise.all([
++        callHealthResultPages('healthListLabResults'),
++        callHealthResultPages('healthListImagingResults'),
++        callHealthResultPages('healthPartnerListResults')
+       ]);
+-      const labResults = (labResponse.results || [])
+-        .filter((item) => item.patientUid === this.user.uid && ['RESULT_AVAILABLE', 'VALIDATED'].includes(String(item.status || '').toUpperCase()))
+-        .map((item) => ({ ...item, resultType: 'laboratory', resultLabel: 'Laboratoire' }));
+-      const imagingResults = (imagingResponse.results || [])
+-        .filter((item) => item.patientUid === this.user.uid && String(item.status || '').toUpperCase() === 'RESULT_AVAILABLE' && item.status !== 'ARCHIVED')
+-        .map((item) => ({ ...item, resultType: 'imaging', resultLabel: 'Imagerie médicale' }));
+-      const results = [...labResults, ...imagingResults].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
++      const partnerResultIds = new Set(partnerResultsPage.map((item) => item.id));
++      const labResults = labResultsPage
++        .filter((item) => !partnerResultIds.has(item.id))
++        .filter((item) => item.patientUid === this.user.uid && String(item.status || '').toUpperCase() === 'RESULT_AVAILABLE' && Boolean(item.patientTransferredAt))
++        .map((item) => ({ ...item, resultType: 'laboratory', resultLabel: 'Laboratoire', examName: item.examName || item.title || item.name }));
++      const imagingResults = imagingResultsPage
++        .filter((item) => !partnerResultIds.has(item.id))
++        .filter((item) => item.patientUid === this.user.uid && String(item.status || '').toUpperCase() === 'RESULT_AVAILABLE' && Boolean(item.patientTransferredAt) && item.status !== 'ARCHIVED')
++        .map((item) => ({ ...item, resultType: 'imaging', resultLabel: 'Imagerie médicale', examName: item.examName || item.title || item.name }));
++      const partnerResults = partnerResultsPage
++        .filter((item) => item.patientUid === this.user.uid && String(item.status || '').toUpperCase() === 'RESULT_AVAILABLE' && Boolean(item.patientTransferredAt))
++        .map((item) => ({ ...item, resultType: 'partner-results', resultLabel: item.providerType === 'imaging' ? 'Imagerie médicale' : 'Laboratoire', examName: item.examName || item.title || item.name }));
++      const allResults = [...labResults, ...imagingResults, ...partnerResults];
++      const seen = new Set();
++      const results = allResults.filter((item) => { const key = `${item.resultType}:${item.id}`; if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => String(b.patientTransferredAt || b.createdAt || '').localeCompare(String(a.patientTransferredAt || a.createdAt || '')));
+       if (!results.length) {
+         root.innerHTML = '<div class="health-card health-empty"><i class="fas fa-file-circle-check"></i><h3>Aucun résultat disponible</h3><p>Vos résultats apparaîtront ici après leur validation par le laboratoire ou le centre d’imagerie.</p></div>';
+         return;
+       }
+-      root.innerHTML = `<div class="health-grid">${results.map((result) => `<article class="health-card"><div class="health-card-actions" style="justify-content:space-between"><span class="health-badge"><i class="fas ${result.resultType === 'laboratory' ? 'fa-flask-vial' : 'fa-x-ray'}"></i> ${result.resultLabel}</span><small>${result.createdAt ? esc(new Date(result.createdAt).toLocaleDateString('fr-HT', { dateStyle: 'medium' })) : 'Date non renseignée'}</small></div><h3>${esc(result.title || result.examName || result.name || (result.resultType === 'laboratory' ? 'Résultat de laboratoire' : 'Compte rendu d’imagerie'))}</h3><p class="muted">Statut : ${esc(statusLabel(result.status))}${result.version ? ` · Version ${esc(result.version)}` : ''}</p><button class="health-btn primary" type="button" data-open-patient-result="${esc(result.id)}" data-result-type="${result.resultType}"><i class="fas fa-file-arrow-down"></i> Voir le résultat</button></article>`).join('')}</div>`;
+-      root.querySelectorAll('[data-open-patient-result]').forEach((button) => button.addEventListener('click', () => this.openPatientResult(button.dataset.openPatientResult, button.dataset.resultType, button)));
++      root.innerHTML = `<div class="health-grid">${results.map((result) => { const files = Array.isArray(result.files) ? result.files : []; const fileActions = files.length ? files.map((file, index) => `<div class="health-result-file"><strong>${esc(file.category === 'IMAGING' ? `Image ${index + 1}` : file.category === 'RADIOLOGY_REPORT' ? 'Rapport radiologique' : file.fileName || 'Résultat')}</strong><div class="health-card-actions"><button class="health-btn secondary" type="button" data-open-patient-result="${esc(result.id)}" data-result-type="${result.resultType}" data-result-file="${esc(file.id || '')}" data-result-action="preview">Voir</button><button class="health-btn secondary" type="button" data-open-patient-result="${esc(result.id)}" data-result-type="${result.resultType}" data-result-file="${esc(file.id || '')}" data-result-action="download">Télécharger</button><button class="health-btn secondary" type="button" data-open-patient-result="${esc(result.id)}" data-result-type="${result.resultType}" data-result-file="${esc(file.id || '')}" data-result-action="print">Imprimer</button></div></div>`).join('') : `<button class="health-btn primary" type="button" data-open-patient-result="${esc(result.id)}" data-result-type="${result.resultType}"><i class="fas fa-file-arrow-down"></i> Voir le résultat</button>`; const date = result.performedAt || result.createdAt || result.patientTransferredAt; return `<article class="health-card"><div class="health-card-actions" style="justify-content:space-between"><span class="health-badge"><i class="fas ${result.resultLabel === 'Laboratoire' ? 'fa-flask-vial' : 'fa-x-ray'}"></i> ${esc(result.resultLabel)}</span><small>${date ? esc(new Date(date).toLocaleDateString('fr-HT', { dateStyle: 'medium' })) : 'Date non renseignée'}</small></div><h3>${esc(result.examName || result.title || result.name || (result.resultLabel === 'Laboratoire' ? 'Résultat de laboratoire' : 'Compte rendu d’imagerie'))}</h3><p class="muted">Commande : ${esc(result.orderId || '—')} · Prestataire : ${esc(result.partnerName || result.providerName || result.providerUid || 'Prestataire')}<br>Déposé : ${result.createdAt ? esc(new Date(result.createdAt).toLocaleString('fr-HT')) : '—'} · ${esc(statusLabel(result.status))}${result.version ? ` · Version ${esc(result.version)}` : ''}</p><div class="health-card-actions">${fileActions}</div></article>`; }).join('')}</div>`;
++      root.querySelectorAll('[data-open-patient-result]').forEach((button) => button.addEventListener('click', () => this.openPatientResult(button.dataset.openPatientResult, button.dataset.resultType, button, button.dataset.resultFile, button.dataset.resultAction || 'preview')));
+     } catch (error) {
+       root.innerHTML = `<div class="health-empty"><i class="fas fa-triangle-exclamation"></i>${esc(error.message || 'Impossible de charger vos résultats.')}</div>`;
+     }
+   }
+
+-  async openPatientResult(resultId, type, button) {
++  async openPatientResult(resultId, type, button, fileId = '', action = 'preview') {
+     if (!this.user || !resultId) return;
+     const original = button?.innerHTML;
+     const pendingTab = window.open('about:blank', '_blank');
+     if (button) { button.disabled = true; button.textContent = 'Ouverture…'; }
+     try {
+-      const endpoint = type === 'laboratory' ? 'healthGetLabResultUrl' : 'healthGetImagingResultUrl';
+-      const result = await callHealth(endpoint, { query: { resultId }, requireAuth: true });
++      const endpoint = type === 'partner-results' ? 'healthPartnerGetResultFileUrl' : type === 'laboratory' ? 'healthGetLabResultUrl' : 'healthGetImagingResultUrl';
++      const result = await callHealth(endpoint, { query: { resultId, ...(fileId ? { fileId } : {}), ...(type === 'partner-results' ? { action } : {}) }, requireAuth: true });
+       if (!result.url) throw new Error('Le document du résultat est indisponible.');
+       if (pendingTab) pendingTab.location.replace(result.url);
+       else window.location.assign(result.url);

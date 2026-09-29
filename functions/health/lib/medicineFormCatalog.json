@@ -1,0 +1,231 @@
+{
+  "categories": [
+    {
+      "category": "Formes orales solides",
+      "subcategories": [
+        "Comprimé",
+        "Comprimé pelliculé",
+        "Comprimé enrobé",
+        "Comprimé non enrobé",
+        "Comprimé sécable",
+        "Comprimé à croquer",
+        "Comprimé dispersible",
+        "Comprimé effervescent",
+        "Comprimé soluble",
+        "Comprimé orodispersible",
+        "Comprimé sublingual",
+        "Comprimé buccal",
+        "Comprimé gastro-résistant",
+        "Comprimé à libération immédiate",
+        "Comprimé à libération prolongée",
+        "Comprimé à libération modifiée",
+        "Comprimé à libération retardée",
+        "Capsule",
+        "Capsule molle",
+        "Capsule dure",
+        "Gélule",
+        "Gélule gastro-résistante",
+        "Gélule à libération prolongée/modifiée",
+        "Granulés",
+        "Granulés effervescents",
+        "Granulés gastro-résistants",
+        "Granulés à libération modifiée",
+        "Poudre orale",
+        "Poudre effervescente",
+        "Sachet-dose de poudre/granulés",
+        "Pastille",
+        "Gomme médicamenteuse",
+        "Pilule"
+      ]
+    },
+    {
+      "category": "Formes orales liquides",
+      "subcategories": [
+        "Solution buvable",
+        "Suspension buvable",
+        "Émulsion buvable",
+        "Sirop",
+        "Élixir",
+        "Gouttes buvables",
+        "Solution buvable en gouttes",
+        "Poudre pour solution buvable",
+        "Poudre pour suspension buvable",
+        "Granulés pour solution buvable",
+        "Granulés pour suspension buvable"
+      ]
+    },
+    {
+      "category": "Formes injectables / parentérales",
+      "subcategories": [
+        "Solution injectable",
+        "Suspension injectable",
+        "Émulsion injectable",
+        "Poudre pour solution injectable",
+        "Poudre pour suspension injectable",
+        "Solution pour perfusion",
+        "Émulsion pour perfusion",
+        "Concentré pour solution pour perfusion",
+        "Poudre pour solution pour perfusion",
+        "Solution injectable en seringue préremplie",
+        "Suspension injectable en seringue préremplie",
+        "Implant",
+        "Implant injectable"
+      ]
+    },
+    {
+      "category": "Formes cutanées / dermatologiques",
+      "subcategories": [
+        "Crème",
+        "Pommade",
+        "Gel cutané",
+        "Lotion",
+        "Solution cutanée",
+        "Suspension cutanée",
+        "Émulsion cutanée",
+        "Poudre cutanée",
+        "Pâte cutanée",
+        "Mousse cutanée",
+        "Spray cutané",
+        "Aérosol cutané",
+        "Shampooing médicamenteux",
+        "Savon médicamenteux",
+        "Patch médicamenteux",
+        "Patch transdermique",
+        "Système transdermique",
+        "Stick cutané"
+      ]
+    },
+    {
+      "category": "Formes ophtalmiques",
+      "subcategories": [
+        "Collyre en solution",
+        "Collyre en suspension",
+        "Collyre en émulsion",
+        "Poudre pour collyre",
+        "Gel ophtalmique",
+        "Pommade ophtalmique",
+        "Solution pour lavage oculaire",
+        "Insert ophtalmique"
+      ]
+    },
+    {
+      "category": "Formes auriculaires",
+      "subcategories": [
+        "Gouttes auriculaires",
+        "Solution auriculaire",
+        "Suspension auriculaire",
+        "Émulsion auriculaire",
+        "Pommade auriculaire",
+        "Spray auriculaire",
+        "Poudre auriculaire"
+      ]
+    },
+    {
+      "category": "Formes nasales",
+      "subcategories": [
+        "Gouttes nasales",
+        "Solution nasale",
+        "Suspension nasale",
+        "Spray nasal",
+        "Poudre nasale",
+        "Gel nasal",
+        "Pommade nasale"
+      ]
+    },
+    {
+      "category": "Formes respiratoires / inhalées",
+      "subcategories": [
+        "Solution pour inhalation",
+        "Suspension pour inhalation",
+        "Poudre pour inhalation",
+        "Gaz pour inhalation",
+        "Aérosol-doseur",
+        "Suspension pour inhalation en aérosol pressurisé",
+        "Solution pour inhalation en aérosol pressurisé",
+        "Solution pour nébulisation",
+        "Suspension pour nébulisation",
+        "Poudre pour nébulisation",
+        "Capsule pour inhalation"
+      ]
+    },
+    {
+      "category": "Formes rectales",
+      "subcategories": [
+        "Suppositoire",
+        "Solution rectale",
+        "Suspension rectale",
+        "Émulsion rectale",
+        "Gel rectal",
+        "Crème rectale",
+        "Pommade rectale",
+        "Mousse rectale",
+        "Lavement",
+        "Poudre pour solution rectale"
+      ]
+    },
+    {
+      "category": "Formes vaginales",
+      "subcategories": [
+        "Ovule",
+        "Capsule vaginale",
+        "Comprimé vaginal",
+        "Suppositoire vaginal",
+        "Crème vaginale",
+        "Gel vaginal",
+        "Pommade vaginale",
+        "Solution vaginale",
+        "Suspension vaginale",
+        "Mousse vaginale",
+        "Anneau vaginal",
+        "Système de diffusion vaginal"
+      ]
+    },
+    {
+      "category": "Formes buccales / oromucosales",
+      "subcategories": [
+        "Solution buccale",
+        "Suspension buccale",
+        "Spray buccal",
+        "Gel buccal",
+        "Pâte buccale",
+        "Pommade buccale",
+        "Bain de bouche",
+        "Solution pour gargarisme",
+        "Pastille médicamenteuse",
+        "Comprimé buccal",
+        "Comprimé sublingual",
+        "Film orodispersible",
+        "Film buccal",
+        "Spray sublingual"
+      ]
+    },
+    {
+      "category": "Formes dentaires",
+      "subcategories": [
+        "Gel dentaire",
+        "Pâte dentaire médicamenteuse",
+        "Solution dentaire",
+        "Poudre dentaire",
+        "Insert dentaire"
+      ]
+    },
+    {
+      "category": "Autres formes spécialisées",
+      "subcategories": [
+        "Solution pour dialyse",
+        "Solution pour dialyse péritonéale",
+        "Solution pour hémofiltration",
+        "Solution pour hémodialyse",
+        "Solution d’irrigation",
+        "Solution pour lavage",
+        "Gaz médicinal comprimé",
+        "Gaz médicinal liquéfié",
+        "Gaz médicinal cryogénique",
+        "Implant",
+        "Ciment médicamenteux",
+        "Éponge médicamenteuse",
+        "Dispositif intra-utérin médicamenteux"
+      ]
+    }
+  ]
+}

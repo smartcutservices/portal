@@ -1,0 +1,1996 @@
+/* =========================================================================
+   Smart Cut — jetons de design partagés (source de vérité unique).
+   Toute couleur / espacement / typo réutilisé sur plusieurs pages passe ici.
+   Les modules (health.css, header.js, …) consomment ces --sc-* au lieu de
+   redéfinir leurs propres variables. Voir la feuille de route « Cap 10/10 » #3.
+   ========================================================================= */
+:root {
+  /* — Neutres & marque marketplace (Amazon-like) — */
+  --sc-ink: #0f1111;
+  --sc-muted: #565959;
+  --sc-link: #007185;
+  --sc-link-hover: #c7511f;
+  --sc-gold: #ffd814;
+  --sc-gold-border: #fcd200;
+  --sc-orange: #ffa41c;
+  --sc-orange-border: #ff8f00;
+  --sc-line: #d5d9d9;
+  --sc-surface: #ffffff;
+  --sc-canvas: #eaeded;
+  --sc-navy: #131921;
+  --sc-navy-soft: #232f3e;
+  --sc-success: #007600;
+  --sc-danger: #b12704;
+
+  /* — Rayons — */
+  --sc-radius-sm: 4px;
+  --sc-radius: 8px;
+  --sc-radius-lg: 16px;
+  --sc-radius-pill: 999px;
+
+  /* — Ombres — */
+  --sc-shadow-sm: 0 1px 2px rgba(15, 17, 17, .08);
+  --sc-shadow: 0 2px 5px rgba(15, 17, 17, .15);
+  --sc-shadow-lg: 0 12px 32px rgba(15, 17, 17, .12);
+
+  /* — Typographie — */
+  --sc-font-sans: 'Amazon Ember', Arial, Helvetica, sans-serif;
+  --sc-font-brand: 'Playfair Display', 'Amazon Ember', Arial, serif;
+  --sc-text-xs: .75rem;
+  --sc-text-sm: .875rem;
+  --sc-text-base: 1rem;
+  --sc-text-md: 1.125rem;
+  --sc-text-lg: 1.375rem;
+  --sc-text-xl: 1.75rem;
+  --sc-text-2xl: 2.25rem;
+  --sc-text-3xl: 3rem;
+
+  /* — Échelle d'espacement (base 4px) — */
+  --sc-space-1: .25rem;
+  --sc-space-2: .5rem;
+  --sc-space-3: .75rem;
+  --sc-space-4: 1rem;
+  --sc-space-5: 1.5rem;
+  --sc-space-6: 2rem;
+  --sc-space-8: 3rem;
+  --sc-space-10: 4rem;
+
+  /* — Accents par service (une seule définition canonique) — */
+  --sc-brand: #3a4e3f;          /* en-tête / vitrine marketplace */
+  --sc-brand-2: #b89b7b;
+  --sc-brand-accent: #7c3e3e;
+  --sc-health: #0f6958;         /* Smart Cut Health */
+  --sc-health-deep: #0c453b;
+  --sc-health-ink: #17211f;
+  --sc-health-muted: #62706c;
+  --sc-health-soft: #eaf6f2;
+  --sc-health-line: #dbe7e3;
+  --sc-health-warm: #f5b848;
+  --sc-education: #c93a24;      /* Smart Academi */
+  --sc-education-hover: #a82e1b;
+  --sc-content-max: 1380px;
+  --sc-content-gutter: clamp(1rem, 3vw, 2rem);
+  --sc-control-height: 44px;
+  /* Auto & Parts : --sc-orange ci-dessus */
+
+  --sc-footer-bg: #131921;
+  --sc-footer-heading: #ffffff;
+  --sc-footer-text: rgba(255, 255, 255, .72);
+  --sc-footer-link-hover: #ffffff;
+}
+
+html { scroll-behavior: smooth; }
+body { background: var(--sc-canvas); color: var(--sc-ink); overflow-x: hidden; }
+
+/* Shared layout primitives: predictable page rhythm on desktop and mobile. */
+.sc-page-width,
+.page-width,
+.container { width: min(calc(100% - (var(--sc-content-gutter) * 2)), var(--sc-content-max)); margin-inline: auto; }
+
+button,
+input,
+select,
+textarea { font: inherit; }
+
+button,
+[role="button"] { min-height: var(--sc-control-height); }
+
+img { max-width: 100%; }
+
+/* Keep fixed headers from hiding anchors and first content. */
+[id] { scroll-margin-top: calc(var(--header-height, 0px) + 1rem); }
+
+.auto-parts-teaser {
+  width: min(100% - 2rem, 1380px);
+  min-height: 230px;
+  margin: 1rem auto;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(360px, 1.1fr);
+  border: 1px solid var(--sc-line);
+  border-radius: var(--sc-radius);
+  background: var(--sc-navy);
+  color: #fff;
+  overflow: hidden;
+}
+.auto-parts-teaser__content { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(1.5rem, 3vw, 2.5rem); }
+.auto-parts-teaser span:first-child { color: var(--sc-orange); font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.auto-parts-teaser h2 { margin: .35rem 0 0; font-size: clamp(1.5rem, 3vw, 2.25rem); letter-spacing: -.03em; }
+.auto-parts-teaser p { margin: .35rem 0 0; color: #c7ced7; }
+.auto-parts-teaser a { min-height: 44px; display: inline-flex; align-items: center; gap: .6rem; margin-top: 1.25rem; border-radius: var(--sc-radius); background: var(--sc-orange); color: var(--sc-ink); padding: .75rem 1rem; font-weight: 800; text-decoration: none; }
+.auto-parts-teaser a span { color: inherit !important; font-size: 1rem !important; letter-spacing: 0 !important; }
+.auto-parts-teaser__media { min-width: 0; min-height: 230px; background: #f6f5f3; overflow: hidden; }
+.auto-parts-teaser__media img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: 68% center; }
+@media (max-width: 640px) {
+  .auto-parts-teaser { width: calc(100% - 1rem); min-height: 0; grid-template-columns: 1fr; }
+  .auto-parts-teaser__content { padding: 1.35rem; }
+  .auto-parts-teaser__media { min-height: 180px; }
+  .auto-parts-teaser a { width: 100%; justify-content: center; }
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--sc-orange-border, #e77600) !important;
+  outline-offset: 1px !important;
+}
+
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: not-allowed !important; }
+
+/* Titres : meilleure répartition des lignes sur les retours à la ligne. */
+:where(h1, h2, h3) { text-wrap: balance; }
+
+/* Accessibilité : respecter la préférence système « réduire les animations ». */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+.cart-container { border-radius: 0 !important; }
+
+#sierra-products-root,
+#sierra-home-discovery-root {
+  margin-block: 0 !important;
+}
+
+#sierra-products-root { padding-block: clamp(2rem, 4vw, 4rem); }
+#sierra-home-discovery-root { padding-top: clamp(1rem, 2vw, 2rem); }
+
+[class^="products-grid-shell-"] {
+  width: min(100% - 2rem, 1380px) !important;
+  margin-inline: auto !important;
+  gap: clamp(1rem, 2vw, 1.5rem) !important;
+}
+
+[class^="product-card-products_"] {
+  overflow: hidden;
+  border: 1px solid var(--sc-line);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-surface);
+  box-shadow: none;
+}
+
+[class^="product-card-products_"] .product-content {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+[class^="product-card-products_"] [class^="product-image-container-"] {
+  margin-bottom: .8rem !important;
+  border-radius: 0 !important;
+  aspect-ratio: 1 / 1;
+  background: #ffffff;
+}
+
+[class^="product-card-products_"] .product-main-image { object-fit: cover; }
+[class^="product-card-products_"] .product-content > div:last-child {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 0 .85rem .9rem !important;
+}
+
+[class^="product-card-products_"] h3 {
+  min-height: 2.8em;
+  margin-bottom: .35rem !important;
+  font-size: 1rem !important;
+  line-height: 1.4;
+}
+
+[class^="product-card-products_"] p { line-height: 1.45; }
+[class^="product-card-products_"] [class^="mobile-actions-"] {
+  display: flex !important;
+  margin-top: auto !important;
+  padding-top: .75rem;
+}
+[class^="product-card-products_"] .mobile-cart-btn {
+  min-height: 44px;
+  border-radius: var(--sc-radius) !important;
+}
+
+.nav-arrow { border: 0; }
+
+.product-trust-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+  margin-top: -.35rem;
+}
+.product-trust-item {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem;
+  border: 1px solid var(--sc-line);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-canvas);
+  color: var(--sc-muted);
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.product-trust-item i { color: var(--sc-success); }
+
+@media (max-width: 1024px) {
+  #sierra-header-root { height: 0 !important; }
+  #headerNebulaX92 .mobile-header-inner { padding: .42rem .65rem .45rem; gap: .35rem; }
+  #headerNebulaX92 .mobile-top-bar { gap: .42rem; }
+  #headerNebulaX92 .mobile-logo { height: 34px; }
+  #headerNebulaX92 .mobile-search-bar,
+  #headerNebulaX92 .currency-selector,
+  #headerNebulaX92 .mobile-icon-button,
+  #headerNebulaX92 .cart-icon-shell { min-height: 44px; }
+  #headerNebulaX92 .mobile-search-bar { padding-inline: .65rem; }
+  #headerNebulaX92 .mobile-right-group { gap: .25rem; }
+  #headerNebulaX92 .mobile-nav-scroll { gap: .4rem; }
+  #headerNebulaX92 .mobile-nav-all,
+  #headerNebulaX92 .mobile-nav-item {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: .45rem .7rem;
+  }
+  #sierra-hero-root { padding-top: var(--header-height-mobile, 104px) !important; }
+}
+
+@media (max-width: 767px) {
+  .cart-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+  [class^="products-grid-shell-"] {
+    width: calc(100% - 1rem) !important;
+    gap: .65rem !important;
+  }
+  [class^="product-card-products_"] h3 { min-height: 0 !important; font-size: .92rem !important; margin-bottom: .2rem !important; }
+  [class^="product-card-products_"] .product-content > div:last-child { padding: 0 .65rem .7rem !important; }
+  [class^="product-card-products_"] p { display: none !important; }
+  [class^="product-card-products_"] .text-xl { font-size: 1.05rem !important; }
+  [class^="product-card-products_"] .mobile-cart-btn { font-size: .8rem !important; padding-inline: .45rem !important; }
+  /* The card's biggest single cost is the square product photo (shortened
+     further down this file, near the other aspect-ratio:1/1 rule, since that
+     one comes later in the cascade and would otherwise win). The
+     "N variante(s) disponible(s)" line is dropped too: useful on the product
+     page, not worth its own line in a compact mobile card. */
+  [class^="product-card-products_"] [class^="product-image-container-"] {
+    margin-bottom: .55rem !important;
+  }
+  [class^="product-card-products_"] .product-store-link { margin-bottom: .3rem !important; }
+  [class^="product-card-products_"] .text-xs.text-accent.mt-1 { display: none !important; }
+  .product-trust-strip { grid-template-columns: 1fr; }
+  .product-trust-item { min-height: 48px; }
+
+  [class^="footer-grid-"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1.5rem 1rem !important;
+  }
+  [class^="footer-grid-"] > [class^="footer-col-"]:first-child,
+  [class^="footer-grid-"] > [class^="footer-col-"]:last-child {
+    grid-column: 1 / -1;
+  }
+  [class^="footer-description-"] {
+    max-width: 38rem;
+    margin-bottom: 1rem !important;
+  }
+  [class^="footer-contact-item-"] {
+    min-width: 0;
+  }
+  [class^="footer-contact-item-"] a,
+  [class^="footer-contact-item-"] span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  [class^="footer-social-link-"] {
+    width: 44px !important;
+    height: 44px !important;
+  }
+}
+
+@media (max-width: 370px) {
+  /* Not width:63px — that clipped "HTG" down to "H·", which read as broken
+     rather than compact. Sized to content instead (native <select> default),
+     just with tighter padding/font so it stays as small as it can legibly be. */
+  #headerNebulaX92 .currency-selector { padding-inline: .5rem; font-size: .74rem; min-height: 40px; }
+  #headerNebulaX92 .mobile-icon-button,
+  #headerNebulaX92 .cart-icon-shell { width: 40px; height: 40px; }
+  #headerNebulaX92 .mobile-right-group { gap: .3rem; }
+  #headerNebulaX92 .mobile-top-bar { gap: .35rem; }
+  #headerNebulaX92 .mobile-search-bar { padding-inline: .55rem; }
+  #headerNebulaX92 .mobile-search-input { font-size: .8rem; }
+  #headerNebulaX92 .mobile-logo-link { gap: .3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Smart Cut Commerce System v3 — Amazon-style ---------------------------- */
+
+body {
+  background: var(--sc-canvas) !important;
+  color: var(--sc-ink) !important;
+  font-family: "Amazon Ember", Arial, Helvetica, sans-serif !important;
+}
+
+/* Global commerce controls */
+:where(button, a, input, select, textarea) { font-family: inherit; }
+:where(button, [role="button"]) { touch-action: manipulation; }
+
+/* Two-level marketplace header — exact Amazon navy */
+#headerNebulaX92 {
+  background: var(--sc-navy) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .3) !important;
+  backdrop-filter: none !important;
+}
+#headerNebulaX92 .desktop-header-inner {
+  max-width: 1540px !important;
+  padding: .65rem 1.25rem 0 !important;
+  gap: .55rem !important;
+}
+#headerNebulaX92 .desktop-top-row { gap: 1rem !important; }
+#headerNebulaX92 .desktop-company-name,
+#headerNebulaX92 .mobile-logo-text { color: #fff !important; font-family: "Amazon Ember", Arial, sans-serif !important; }
+#headerNebulaX92 .desktop-company-name,
+#headerNebulaX92 .mobile-logo-text { display: none !important; }
+#headerNebulaX92 .desktop-company-name { font-size: 1.15rem !important; font-weight: 700 !important; letter-spacing: -.01em !important; }
+#headerNebulaX92 .desktop-logo,
+#headerNebulaX92 .mobile-logo { background: transparent; border-radius: 0; padding: 0; }
+#headerNebulaX92 .desktop-search-bar,
+#headerNebulaX92 .mobile-search-bar {
+  min-height: 52px !important;
+  border: 1px solid rgba(15,17,17,.12) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  box-shadow: 0 3px 12px rgba(15,17,17,.08) !important;
+  padding-inline: 1rem !important;
+}
+#headerNebulaX92 .desktop-search-bar:focus-within,
+#headerNebulaX92 .mobile-search-bar:focus-within { border-color: var(--sc-orange) !important; }
+#headerNebulaX92 .desktop-search-input,
+#headerNebulaX92 .mobile-search-input { color: var(--sc-ink) !important; }
+#headerNebulaX92 .desktop-search-bar i,
+#headerNebulaX92 .mobile-search-bar i { color: var(--sc-muted) !important; }
+#headerNebulaX92 .currency-selector {
+  min-height: 48px !important;
+  border: 1px solid rgba(255,255,255,.4) !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+  padding-inline: .9rem !important;
+  font-weight: 700 !important;
+}
+#headerNebulaX92 .currency-selector option { color: var(--sc-ink); }
+#headerNebulaX92 .desktop-icon-button,
+#headerNebulaX92 .mobile-icon-button,
+#headerNebulaX92 .cart-icon-shell {
+  width: 46px !important;
+  height: 46px !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--sc-radius-sm) !important;
+  background: transparent !important;
+  color: #fff !important;
+}
+#headerNebulaX92 .desktop-icon-button:hover,
+#headerNebulaX92 .mobile-icon-button:hover,
+#headerNebulaX92 .cart-icon-shell:hover { border-color: #fff !important; transform: none !important; }
+#headerNebulaX92 .desktop-icon,
+#headerNebulaX92 .mobile-icon { color: var(--sc-orange) !important; }
+#headerNebulaX92 .cart-icon-shell {
+  width: 48px !important;
+  height: 48px !important;
+}
+#headerNebulaX92 .cart-icon-shell .desktop-icon,
+#headerNebulaX92 .cart-icon-shell .mobile-icon {
+  font-size: 1.4rem !important;
+}
+#headerNebulaX92 .desktop-nav-row {
+  margin-inline: -1.25rem !important;
+  margin-top: .65rem !important;
+  padding: .15rem 1.25rem .2rem !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+#headerNebulaX92 .desktop-all-button,
+#headerNebulaX92 .desktop-nav-action,
+#headerNebulaX92 .categoryTriggerLux77 {
+  min-height: 42px !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--sc-radius-sm) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+#headerNebulaX92 .desktop-all-button:hover,
+#headerNebulaX92 .desktop-nav-action:hover,
+#headerNebulaX92 .categoryTriggerLux77:hover { border-color: #fff !important; color: #fff !important; transform: none !important; }
+
+/* Compact button-like navigation links on the transparent secondary row. */
+#headerNebulaX92 .desktop-all-button,
+#headerNebulaX92 .desktop-nav-action,
+#headerNebulaX92 .smartsolution-menu__trigger,
+#headerNebulaX92 .mobile-nav-all,
+#headerNebulaX92 .mobile-nav-item {
+  background: rgba(255,255,255,.08) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+#headerNebulaX92 .desktop-nav-items { gap: 1.1rem !important; }
+#headerNebulaX92 .desktop-nav-action,
+#headerNebulaX92 .smartsolution-menu__trigger,
+#headerNebulaX92 .desktop-all-button { padding-inline: 1rem !important; }
+#headerNebulaX92 .desktop-all-button:hover,
+#headerNebulaX92 .desktop-nav-action:hover,
+#headerNebulaX92 .smartsolution-menu__trigger:hover,
+#headerNebulaX92 .mobile-nav-all:hover,
+#headerNebulaX92 .mobile-nav-item:hover {
+  background: rgba(255,255,255,.16) !important;
+  border-color: rgba(255,255,255,.5) !important;
+}
+
+/* Keep the secondary navigation independent from the dark utility header. */
+@media (min-width: 769px) {
+  #headerNebulaX92 {
+    background: linear-gradient(
+      to bottom,
+      var(--hero-dominant-color, var(--sc-navy)) 0,
+      var(--hero-dominant-color, var(--sc-navy)) 80px,
+      transparent 80px,
+      transparent 100%
+    ) !important;
+  }
+  #headerNebulaX92 .desktop-nav-row {
+    color: var(--sc-ink) !important;
+  }
+
+  #headerNebulaX92 .desktop-all-button,
+  #headerNebulaX92 .desktop-nav-action,
+  #headerNebulaX92 .smartsolution-menu__trigger,
+  #headerNebulaX92 .categoryTriggerLux77,
+  #headerNebulaX92 .mobile-nav-all,
+  #headerNebulaX92 .mobile-nav-item {
+    background: rgba(255,255,255,.94) !important;
+    border-color: rgba(15,17,17,.14) !important;
+    color: var(--sc-ink) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 7px rgba(15,17,17,.10) !important;
+  }
+
+  /* Distinct, restrained tones make each destination scannable. Same colors
+     on .mobile-nav-item as .desktop-nav-action below (768-1024px keeps the
+     compact scrollable layout — header.js's own breakpoint for that switch
+     is 1024px, not this file's 769px — but must share the same palette,
+     matched here by href since the mobile items list has an extra <details>
+     element at the SmartSolutionTek position that would throw off nth-child). */
+  #headerNebulaX92 .desktop-nav-items > .desktop-nav-action:nth-child(1) { background: #e8ddff !important; }
+  #headerNebulaX92 .desktop-nav-items > .desktop-nav-action:nth-child(2) { background: #ffe0bd !important; }
+  #headerNebulaX92 .desktop-nav-items > .desktop-nav-action:nth-child(3) { background: #cfe7ff !important; }
+  #headerNebulaX92 .desktop-nav-items > .smartsolution-menu:nth-child(4) .smartsolution-menu__trigger { background: #d9f3e5 !important; }
+  #headerNebulaX92 .desktop-nav-items > .desktop-nav-action:nth-child(5) { background: #fff0b8 !important; }
+  #headerNebulaX92 .desktop-nav-items > .desktop-nav-action:nth-child(6) { background: #d9e8ff !important; }
+  #headerNebulaX92 .desktop-nav-items > .desktop-nav-action:nth-child(7) { background: #f3d8e8 !important; }
+
+  /* Same nth-child fallback as desktop above, so a future href change (like the
+     "logiciel proformat" -> "services.html" one already caught while fixing this)
+     can't silently drop a color here without breaking desktop too. */
+  #headerNebulaX92 .mobile-nav-items > .mobile-nav-item:nth-child(1) { background: #e8ddff !important; }
+  #headerNebulaX92 .mobile-nav-items > .mobile-nav-item:nth-child(2) { background: #ffe0bd !important; }
+  #headerNebulaX92 .mobile-nav-items > .mobile-nav-item:nth-child(3) { background: #cfe7ff !important; }
+  #headerNebulaX92 .mobile-nav-items > .mobile-nav-item:nth-child(5) { background: #fff0b8 !important; }
+  #headerNebulaX92 .mobile-nav-items > .mobile-nav-item:nth-child(6) { background: #d9e8ff !important; }
+  #headerNebulaX92 .mobile-nav-items > .mobile-nav-item:nth-child(7) { background: #f3d8e8 !important; }
+
+  #headerNebulaX92 .desktop-nav-items > a[href*="printing"],
+  #headerNebulaX92 .mobile-nav-items > a[href*="printing"] { background: #e8ddff !important; }
+  #headerNebulaX92 .desktop-nav-items > a[href*="vendor"],
+  #headerNebulaX92 .mobile-nav-items > a[href*="vendor"] { background: #ffe0bd !important; }
+  #headerNebulaX92 .desktop-nav-items > a[href*="auto-parts"],
+  #headerNebulaX92 .mobile-nav-items > a[href*="auto-parts"] { background: #cfe7ff !important; }
+  #headerNebulaX92 .desktop-nav-items > a[href*="education"],
+  #headerNebulaX92 .mobile-nav-items > a[href*="education"] { background: #fff0b8 !important; }
+  #headerNebulaX92 .desktop-nav-items > a[href*="services.html"],
+  #headerNebulaX92 .mobile-nav-items > a[href*="services.html"] { background: #d9e8ff !important; }
+  #headerNebulaX92 .desktop-nav-items > a[href*="health"],
+  #headerNebulaX92 .mobile-nav-items > a[href*="health"] { background: #f3d8e8 !important; }
+  #headerNebulaX92 .mobile-nav-items > .mobile-smartsolution-menu > summary.mobile-nav-item { background: #d9f3e5 !important; }
+
+  #headerNebulaX92 .desktop-all-button,
+  #headerNebulaX92 .mobile-nav-all { background: #ffe3a3 !important; }
+
+  #headerNebulaX92 .desktop-all-button:hover,
+  #headerNebulaX92 .desktop-nav-action:hover,
+  #headerNebulaX92 .smartsolution-menu__trigger:hover,
+  #headerNebulaX92 .categoryTriggerLux77:hover,
+  #headerNebulaX92 .mobile-nav-all:hover,
+  #headerNebulaX92 .mobile-nav-item:hover {
+    background: var(--sc-gold) !important;
+    border-color: var(--sc-gold-border) !important;
+    color: var(--sc-ink) !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  /* Five equal cards fill the desktop rail without a clipped sixth slot. */
+  .home-discovery__section[data-section="sponsored"] .home-discovery-card,
+  .home-discovery__section[data-section="recommended"] .home-discovery-card {
+    flex: 0 0 calc((100% - 4rem) / 5) !important;
+    width: calc((100% - 4rem) / 5) !important;
+    max-width: calc((100% - 4rem) / 5) !important;
+  }
+}
+
+/* Curated product grid */
+#home-hero-categories-shell {
+  position: relative;
+  overflow: hidden;
+  width: calc(100% - 2rem) !important;
+  margin-inline: auto !important;
+  background: linear-gradient(135deg, var(--hero-dominant-color, #081b3a) 0%, var(--hero-secondary-color, #123f78) 100%) !important;
+}
+#home-hero-categories-shell #sierra-hero-root,
+#home-hero-categories-shell #sierra-home-categories-root { background: transparent !important; }
+#home-hero-categories-shell #sierra-hero-root,
+#home-hero-categories-shell #sierra-home-categories-root {
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+#sierra-home-categories-root {
+  padding: .75rem 1rem 0 !important;
+  background: transparent !important;
+}
+#sierra-hero-root,
+#sierra-hero-root .posterHeroRoot913 {
+  background: linear-gradient(135deg, var(--hero-dominant-color, #081b3a) 0%, var(--hero-secondary-color, #123f78) 100%) !important;
+}
+#sierra-hero-root .posterHeroArrows913 { display: none !important; }
+#sierra-hero-root .posterHeroDots913 { display: none !important; }
+#sierra-hero-root .posterHeroArrows913 { display: flex !important; }
+#sierra-hero-root .posterHeroArrows913 {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  transform: none !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  pointer-events: none !important;
+}
+#sierra-hero-root .posterHeroFooter913 { position: static !important; }
+#sierra-hero-root .posterHeroArrow913 {
+  pointer-events: auto !important;
+  width: 2.8rem !important;
+  height: 3.4rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(8,27,58,.62) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  color: #fff !important;
+  font-size: 2.7rem !important;
+  line-height: 1 !important;
+  text-shadow: 0 2px 5px rgba(0,0,0,.65) !important;
+  animation: heroChevronPulse 2.2s ease-in-out infinite;
+}
+#sierra-hero-root .posterHeroArrow913:hover {
+  background: rgba(8,27,58,.84) !important;
+  border: 0 !important;
+  transform: scale(1.08) !important;
+}
+#sierra-hero-root .posterHeroArrow913[data-hero-next] { animation-delay: .35s; }
+@keyframes heroChevronPulse {
+  0%, 100% { opacity: .82; }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.08); }
+}
+#sierra-hero-root .posterHeroArrow913[data-hero-prev],
+#sierra-hero-root .posterHeroArrow913[data-hero-next] {
+  position: absolute !important;
+  top: 42% !important;
+  z-index: 30 !important;
+  transform: translateY(-50%) !important;
+}
+#sierra-hero-root .posterHeroArrow913[data-hero-prev] { left: .5rem !important; }
+#sierra-hero-root .posterHeroArrow913[data-hero-next] { right: .5rem !important; }
+#sierra-hero-root .posterHeroRoot913,
+#sierra-hero-root .posterHeroPoster913 {
+  border-radius: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+#sierra-hero-root .posterHeroRoot913 { margin-top: 0 !important; }
+#sierra-hero-root .posterHeroSlide913 { padding-top: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
+
+@media (min-width: 769px) {
+  #sierra-hero-root,
+  #sierra-home-categories-root {
+    width: calc(100% - 2rem) !important;
+    margin-inline: auto !important;
+  }
+
+  #sierra-hero-root { position: relative; z-index: 1 !important; }
+
+  #sierra-hero-root .posterHeroRoot913 {
+    height: clamp(360px, 48vh, 560px) !important;
+    min-height: 0 !important;
+  }
+  #sierra-hero-root .posterHeroViewport913,
+  #sierra-hero-root .posterHeroTrack913 {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  #sierra-hero-root .posterHeroSlide913,
+  #sierra-hero-root .posterHeroPoster913 {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  #sierra-hero-root .posterHeroPosterImage913 {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  #sierra-home-categories-root {
+    position: relative;
+    z-index: 2;
+    margin-top: -132px !important;
+    padding-top: 0 !important;
+  }
+}
+
+/* Tablette (768–1023 px)
+   Le header utilise encore le rendu mobile jusqu'à 1024 px, alors que le
+   hero basculait déjà sur la hauteur desktop. L'image restait donc à sa
+   hauteur intrinsèque et laissait une grande zone vide sous la bannière.
+   Le visuel remplit maintenant toute la hauteur du hero et le rail reprend
+   son chevauchement contrôlé, comme sur les autres formats. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #sierra-hero-root,
+  #sierra-hero-root .posterHeroRoot913,
+  #sierra-hero-root .posterHeroViewport913,
+  #sierra-hero-root .posterHeroTrack913,
+  #sierra-hero-root .posterHeroSlide913,
+  #sierra-hero-root .posterHeroPoster913 {
+    height: clamp(320px, 43vw, 430px) !important;
+    min-height: 0 !important;
+  }
+
+  #sierra-hero-root .posterHeroPosterImage913 {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    object-fit: cover !important;
+    object-position: center !important;
+  }
+
+  #sierra-home-categories-root {
+    position: relative !important;
+    z-index: 2 !important;
+    margin-top: -104px !important;
+    padding-top: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding-bottom: 1rem !important;
+  }
+
+  /* Les boutons de la rangée tablette doivent conserver les mêmes pastilles
+     arrondies que sur mobile et desktop, malgré le style mobile injecté par
+     header.js. */
+  #headerNebulaX92 .mobile-nav-all,
+  #headerNebulaX92 .mobile-nav-item,
+  #headerNebulaX92 .mobile-smartsolution-menu > summary.mobile-nav-item {
+    border-radius: 14px !important;
+  }
+}
+
+#sierra-home-categories-root .categories-wrapper-carousel {
+  width: min(100%, 1500px) !important;
+  max-width: none !important;
+  margin-inline: auto !important;
+  padding: 0 !important;
+}
+
+/* Uniformiser les liens de navigation : de vraies pastilles sur chaque
+   breakpoint, y compris la plage tablette 768–1024 px. */
+#headerNebulaX92 .desktop-all-button,
+#headerNebulaX92 .desktop-nav-action,
+#headerNebulaX92 .smartsolution-menu__trigger,
+#headerNebulaX92 .mobile-nav-all,
+#headerNebulaX92 .mobile-nav-item,
+#headerNebulaX92 .mobile-smartsolution-menu > summary.mobile-nav-item {
+  border-radius: 999px !important;
+}
+#sierra-home-categories-root .categories-head { display: none !important; }
+#sierra-home-categories-root .categories-nav-buttons { display: none !important; }
+#sierra-home-categories-root .categories-head { margin-bottom: .7rem !important; }
+#sierra-home-categories-root .categories-head h2 { font-size: 1.2rem !important; font-weight: 700 !important; }
+#sierra-home-categories-root .categories-row { gap: .75rem !important; padding-bottom: .35rem !important; }
+#sierra-home-categories-root .category-card {
+  flex: 0 0 clamp(190px, 20vw, 280px) !important;
+  border: 1px solid var(--sc-line) !important;
+  border-radius: var(--sc-radius-sm) !important;
+  box-shadow: none !important;
+}
+#sierra-home-categories-root .category-image-container {
+  aspect-ratio: 4 / 5 !important;
+}
+#sierra-home-categories-root .category-card:hover { transform: translateY(-3px) !important; box-shadow: var(--sc-shadow) !important; }
+#sierra-home-categories-root .category-name {
+  display: block !important;
+  padding: .75rem .8rem .85rem !important;
+  font-size: .92rem !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+  color: var(--sc-ink) !important;
+  background: #fff !important;
+}
+#sierra-home-categories-root .ecosystem-description {
+  display: block;
+  margin-top: .3rem;
+  color: var(--sc-muted) !important;
+  font-size: .78rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+@media (max-width: 767px) {
+  #headerNebulaX92 .mobile-nav-all {
+    flex: 0 0 auto !important;
+    position: relative !important;
+    z-index: 5 !important;
+    white-space: nowrap !important;
+    margin-right: .45rem !important;
+  }
+  #headerNebulaX92 .mobile-nav-items {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding-left: .2rem !important;
+  }
+
+  #home-hero-categories-shell { width: calc(100% - 1rem) !important; }
+}
+#sierra-home-categories-root .category-card--grouped { padding: 1.1rem !important; background: #fff !important; }
+#sierra-home-categories-root .category-group-title {
+  margin-top: .8rem;
+  margin-bottom: 0;
+  color: var(--sc-ink);
+  font-size: clamp(.76rem, .9vw, .9rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+  max-height: 2.5em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#sierra-home-categories-root .category-group-main { aspect-ratio: 16 / 10; overflow: hidden; border-radius: 8px; }
+#sierra-home-categories-root .category-group-link { display: block; width: 100%; height: 100%; color: inherit; text-decoration: none; }
+#sierra-home-categories-root .category-group-link:focus-visible { outline: 3px solid var(--sc-orange); outline-offset: -3px; }
+#sierra-home-categories-root .category-group-main .category-image { aspect-ratio: 16 / 10; }
+#sierra-home-categories-root .category-group-subgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; margin-top: .7rem; }
+#sierra-home-categories-root .category-group-subgrid > div { min-width: 0; overflow: hidden; }
+#sierra-home-categories-root .category-group-subgrid .category-image { aspect-ratio: 1 / 1; border-radius: 6px; }
+#sierra-home-categories-root .category-group-subgrid span { display: block; margin-top: .3rem; color: var(--sc-muted); font-size: .78rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 1600px) {
+  #sierra-home-categories-root .categories-wrapper-carousel {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+  }
+}
+@media (min-width: 769px) {
+  #sierra-home-categories-root .categories-row {
+    overflow-x: hidden !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  #sierra-home-categories-root .categories-row .category-card--grouped {
+    flex: none !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  #sierra-home-categories-root .category-card {
+    flex-basis: calc((100% - 2.25rem) / 4) !important;
+    max-width: none !important;
+  }
+}
+/* This whole block used to stop at 767px — the fixed header's dynamic-color,
+   see-through overlap onto the hero (and matching mobile-nav-item look) then
+   simply didn't exist at 768px: neither this block nor the ≥769px desktop
+   block (further up this file) fired there, leaving a flat, static, opaque
+   header with no hero color showing through. Widened to 1024px so it covers
+   every width where header.js actually renders the mobile header markup
+   (.mobile-header-inner, per header.js's own 1024/1025px breakpoint) instead
+   of stopping short of it. */
+@media (max-width: 1024px) {
+  #home-hero-categories-shell {
+    padding-top: var(--header-height-mobile, 104px) !important;
+    background: transparent !important;
+  }
+  /* Keep the shared hero/category gradient below the fixed transparent header. */
+  #home-hero-categories-shell::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: var(--header-height-mobile, 104px);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, var(--hero-dominant-color, #081b3a) 0%, var(--hero-secondary-color, #123f78) 100%);
+  }
+  #home-hero-categories-shell > * { position: relative; z-index: 1; }
+  #sierra-hero-root { padding-top: 0 !important; }
+  #headerNebulaX92 {
+    background: linear-gradient(180deg, var(--hero-dominant-color, var(--sc-navy)) 0%, var(--hero-secondary-color, var(--sc-navy-soft)) 100%) !important;
+  }
+  #headerNebulaX92 .mobile-nav-item {
+    min-height: 38px !important;
+    padding-inline: .8rem !important;
+    border: 1px solid rgba(255,255,255,.2) !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+  }
+  #headerNebulaX92 .mobile-nav-item:hover,
+  #headerNebulaX92 .mobile-smartsolution-menu[open] > summary {
+    background: rgba(255,255,255,.2) !important;
+    color: #fff !important;
+  }
+  #sierra-hero-root,
+  #sierra-home-categories-root { width: calc(100% - 1rem) !important; margin-inline: .5rem !important; }
+  #sierra-home-categories-root { padding-inline: .5rem !important; }
+  #sierra-home-categories-root .categories-wrapper-carousel { width: 100% !important; }
+}
+#sierra-products-root {
+  width: calc(100% - 2rem) !important;
+  margin-inline: auto !important;
+  padding-block: 1.25rem 1rem !important;
+  background: var(--sc-canvas) !important;
+}
+#sierra-products-root [class^="products-grid-header-"] {
+  display: flex !important;
+}
+#sierra-products-root [class*=" products-grid-layout-"] {
+  padding-top: 0 !important;
+}
+[class*=" products-grid-layout-"] { max-width: 1500px !important; padding-inline: 1rem !important; }
+[class^="products-grid-header-"] {
+  margin-bottom: .8rem !important;
+  padding: .9rem 1rem !important;
+  border-radius: var(--sc-radius) !important;
+  background: #fff !important;
+  box-shadow: var(--sc-shadow) !important;
+}
+.home-section-heading {
+  min-height: 58px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  margin: 0 0 .8rem !important;
+  padding: .9rem 1rem !important;
+  border: 1px solid var(--sc-line) !important;
+  border-radius: var(--sc-radius) !important;
+  background: #fff !important;
+  box-shadow: var(--sc-shadow) !important;
+}
+.home-section-heading .home-section-title {
+  margin: 0 !important;
+  color: var(--sc-ink) !important;
+  font-family: "Amazon Ember", Arial, sans-serif !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -.01em !important;
+  text-transform: none !important;
+}
+[class^="products-grid-header-"] h2,
+.home-discovery__heading h2 {
+  font-family: "Amazon Ember", Arial, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -.01em !important;
+}
+[class^="products-grid-eyebrow-"] { color: var(--sc-link); }
+[class^="products-grid-all-"] {
+  border-color: #a2a6ac !important;
+  border-radius: 999px !important;
+  box-shadow: 0 1px 2px rgba(15,17,17,.15) !important;
+}
+[class^="products-grid-shell-"] { gap: .75rem !important; }
+[class^="product-card-products_"] {
+  border: 1px solid var(--sc-line) !important;
+  border-radius: var(--sc-radius-sm) !important;
+  box-shadow: none !important;
+  transition: box-shadow .18s ease, transform .18s ease !important;
+}
+[class^="product-card-products_"]:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--sc-shadow) !important;
+}
+[class^="product-card-products_"] [class^="product-image-container-"] {
+  background: #fff !important;
+  aspect-ratio: 1 / 1 !important;
+}
+@media (max-width: 767px) {
+  /* Overrides the 1/1 two lines up — that rule comes later in the cascade than
+     the one in the max-width:767px block near the top of this file, so this
+     needs to sit after it too, or it never wins. */
+  [class^="product-card-products_"] [class^="product-image-container-"] {
+    aspect-ratio: 5 / 4 !important;
+  }
+}
+[class^="product-card-products_"] .product-main-image {
+  object-fit: contain !important;
+  padding: .75rem !important;
+  transform: none !important;
+}
+[class^="product-card-products_"] h3 {
+  color: var(--sc-link) !important;
+  font-size: .94rem !important;
+  font-weight: 400 !important;
+}
+[class^="product-card-products_"] p { color: var(--sc-muted) !important; font-size: .8rem !important; }
+[class^="product-card-products_"] .text-xl { color: var(--sc-ink) !important; font-size: 1.08rem !important; font-weight: 700 !important; }
+[class^="product-card-products_"] .nav-arrow {
+  width: 44px !important;
+  height: 44px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  background: rgba(255,255,255,.94) !important;
+  color: #111827 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,.22) !important;
+}
+[class^="product-card-products_"] .nav-arrow i,
+[class^="product-card-products_"] .nav-arrow svg,
+[class^="product-card-products_"] .nav-arrow span {
+  color: #111827 !important;
+  fill: #111827 !important;
+}
+[class^="product-card-products_"] .nav-arrow.left { left: .35rem !important; }
+[class^="product-card-products_"] .nav-arrow.right { right: .35rem !important; }
+[class^="product-card-products_"] .mobile-cart-btn,
+.add-to-cart-btn,
+.checkout-btn,
+.pay-now-btn {
+  min-height: 48px !important;
+  border: 1px solid var(--sc-gold-border) !important;
+  border-radius: var(--sc-radius) !important;
+  background: var(--sc-gold) !important;
+  color: var(--sc-ink) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.4) inset !important;
+}
+[class^="product-card-products_"] .mobile-cart-btn:hover,
+.add-to-cart-btn:hover,
+.checkout-btn:hover,
+.pay-now-btn:hover { background: #f7ca00 !important; }
+
+/* Discovery rails use one visual language */
+#sierra-products-root,
+#sierra-home-discovery-root,
+#sierra-services-teaser-root,
+#ecosystem-sections-rail,
+#sierra-sst-showcase-root,
+#sierra-home-tickets-root { background: transparent !important; }
+#sierra-services-teaser-root .services-teaser,
+#sierra-sst-showcase-root .sst-showcase {
+  background: transparent !important;
+}
+#sierra-home-discovery-root { padding: .25rem 1rem 1.5rem !important; }
+.home-discovery { max-width: 1500px !important; margin: 0 auto !important; }
+
+/* Keep the homepage composition fluid on wide and ultra-wide displays.
+   The desktop baseline remains intentionally compact; once there is enough
+   room, the product rails grow with the viewport instead of leaving large
+   empty gutters on either side. */
+@media (min-width: 1600px) {
+  [class*=" products-grid-layout-"],
+  .home-discovery {
+    width: calc(100% - 4rem) !important;
+    max-width: 2200px !important;
+  }
+
+  [class^="products-grid-shell-"] {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 2300px) {
+  [class*=" products-grid-layout-"],
+  .home-discovery {
+    width: calc(100% - 6rem) !important;
+    max-width: 2600px !important;
+  }
+
+  [class^="products-grid-shell-"] {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Ultra-wide viewport correction: the original desktop caps below would
+   otherwise keep the header and product rail visually tiny at 2K/4K sizes. */
+@media (min-width: 1600px) {
+  :root { --header-height: 176px; }
+  #headerNebulaX92 .desktop-header-inner {
+    padding: 1rem 2rem .75rem !important;
+    gap: .9rem !important;
+  }
+  #headerNebulaX92 .desktop-logo { height: 66px !important; }
+  #headerNebulaX92 .desktop-search-bar { min-height: 58px !important; }
+  #headerNebulaX92 .desktop-search-input { font-size: 1rem !important; }
+  #headerNebulaX92 .desktop-nav-action,
+  #headerNebulaX92 .desktop-all-button,
+  #headerNebulaX92 .smartsolution-menu__trigger { min-height: 46px !important; font-size: .96rem !important; }
+  #headerNebulaX92 .desktop-header-inner {
+    width: calc(100% - 3rem) !important;
+    max-width: none !important;
+  }
+
+  #sierra-products-root [class^="products-grid-shell-"] {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* Match the proportions of the featured-product rail: keep product cards
+   readable instead of packing too many tiny columns on desktop. */
+@media (min-width: 1024px) {
+  #headerNebulaX92 .desktop-header-inner {
+    width: calc(100% - 2rem) !important;
+    max-width: none !important;
+  }
+
+  [class*=" products-grid-layout-"] {
+    width: calc(100% - 2rem) !important;
+    max-width: none !important;
+  }
+
+  #sierra-products-root [class^="products-grid-shell-"] {
+    width: 100% !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 2000px) {
+  [class*=" products-grid-layout-"] {
+    width: calc(100% - 4rem) !important;
+  }
+
+  #sierra-products-root [class^="products-grid-shell-"] {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+}
+.home-discovery__section {
+  margin-bottom: 1rem !important;
+  padding: 1rem !important;
+  border: 0 !important;
+  border-radius: var(--sc-radius) !important;
+  background: #fff !important;
+  box-shadow: var(--sc-shadow) !important;
+}
+.home-discovery__section,
+.home-discovery__section[data-section="sponsored"],
+.home-discovery__section[data-section="recommended"],
+.home-discovery__section[data-section="vendors"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.home-discovery__section::before { display: none !important; }
+.home-discovery__heading { margin-bottom: .85rem !important; }
+.home-discovery__section .home-discovery__heading h2 { color: var(--sc-ink) !important; font-size: 1.35rem !important; }
+.home-discovery__section .home-discovery__heading .home-section-title { font-size: 1.25rem !important; }
+.home-discovery__rail { gap: .75rem !important; }
+.home-discovery-card {
+  border: 1px solid var(--sc-line) !important;
+  border-radius: var(--sc-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+/* Top sellers use the same product-card proportions as "Produits à la une". */
+@media (min-width: 769px) {
+  .home-discovery__section[data-section="vendors"] .home-discovery__vendors {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding-inline: 0 !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card {
+    flex: 0 0 clamp(220px, 22vw, 280px) !important;
+    width: clamp(220px, 22vw, 280px) !important;
+    max-width: clamp(220px, 22vw, 280px) !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__image {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__body {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    padding: 1rem !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card h3 {
+    min-height: 3.05rem !important;
+    font-size: 1.125rem !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__desc {
+    min-height: 2.5rem !important;
+    font-size: .875rem !important;
+  }
+}
+@media (min-width: 1200px) {
+  .home-discovery__section[data-section="vendors"] .home-discovery-card {
+    flex-basis: calc((100% - 4rem) / 5) !important;
+    width: calc((100% - 4rem) / 5) !important;
+    max-width: calc((100% - 4rem) / 5) !important;
+  }
+}
+/* Desktop top-vendor rail: compact service-style cards with one shared
+   media height and a fixed content rhythm, so no card grows independently. */
+@media (min-width: 769px) {
+  .home-discovery__section[data-section="vendors"] {
+    margin-top: 1.25rem !important;
+    padding: 1rem !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery__heading {
+    margin-bottom: .75rem !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery__vendors {
+    align-items: stretch !important;
+    padding: 0 0 .55rem !important;
+    gap: .75rem !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__image {
+    aspect-ratio: auto !important;
+    height: 190px !important;
+    min-height: 190px !important;
+    max-height: 190px !important;
+    overflow: hidden !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    padding: 0 !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__body {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    min-height: 150px !important;
+    max-height: 150px !important;
+    padding: .85rem !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card h3 {
+    min-height: 2.55rem !important;
+    margin-bottom: .3rem !important;
+    line-height: 1.25 !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__desc {
+    min-height: 2.35rem !important;
+  }
+  .home-discovery__section[data-section="vendors"] .home-discovery-card__footer {
+    margin-top: auto !important;
+  }
+}
+@media (max-width: 520px) {
+  .home-discovery__section[data-section="vendors"] .home-discovery-card {
+    flex-basis: 68vw !important;
+    max-width: 270px !important;
+  }
+}
+.home-discovery-card:hover { transform: translateY(-2px) !important; box-shadow: var(--sc-shadow) !important; }
+.home-discovery-card__image { background: #fff !important; }
+.home-discovery-card__image img { object-fit: contain !important; padding: .65rem !important; }
+.home-discovery-card h3 { font-family: "Amazon Ember", Arial, sans-serif !important; font-size: .92rem !important; font-weight: 400 !important; color: var(--sc-link) !important; }
+.home-discovery-card__desc { color: var(--sc-muted) !important; }
+.home-discovery-card__footer strong { color: var(--sc-ink) !important; }
+.home-discovery-card__section-badge {
+  border-radius: 3px !important;
+  background: var(--sc-navy-soft) !important;
+  box-shadow: none !important;
+}
+
+/* Catalogue */
+[class^="catalogue-wrapper-"] { background: var(--sc-canvas) !important; }
+[class^="catalogue-wrapper-"] > .catalogue-header {
+  position: relative !important;
+  border-bottom: 1px solid var(--sc-line) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+[class^="catalogue-wrapper-"] > .catalogue-header > div { max-width: 1500px !important; }
+[class^="catalogue-wrapper-"] > .catalogue-header h1 {
+  font-family: "Amazon Ember", Arial, sans-serif !important;
+  font-size: clamp(1.45rem, 3vw, 2.1rem) !important;
+  font-weight: 700 !important;
+}
+[class^="catalogue-wrapper-"] .search-bar input {
+  min-height: 48px !important;
+  border: 2px solid #879596 !important;
+  border-radius: var(--sc-radius-sm) !important;
+}
+[class^="catalogue-wrapper-"] .search-bar input:focus { border-color: var(--sc-orange) !important; box-shadow: 0 0 0 2px rgba(255,164,28,.3) !important; }
+[class^="catalogue-container-"] { max-width: 1500px !important; padding: 1rem !important; gap: 1rem !important; }
+.catalogue-body #sierra-footer-root { display: none !important; }
+.catalogue-body #catalogue-page-root { overflow: hidden !important; }
+.catalogue-body .catalogue-shell { height: 100% !important; min-height: 0 !important; padding-bottom: 0 !important; overflow: hidden !important; }
+.catalogue-body #catalogue-section-root { height: 100% !important; min-height: 0 !important; overflow: hidden !important; }
+[class^="catalogue-wrapper-"] { height: 100% !important; min-height: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+[class^="catalogue-wrapper-"] > [class^="catalogue-container-"] { flex: 1 1 auto !important; }
+[class^="catalogue-container-"] {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Final homepage polish: keep discovery cards compact, aligned and predictable
+   at every desktop width instead of letting long copy stretch individual cards. */
+.home-discovery__section[data-section="sponsored"] .home-discovery-card,
+.home-discovery__section[data-section="recommended"] .home-discovery-card {
+  min-height: 0 !important;
+}
+.home-discovery__section[data-section="sponsored"] .home-discovery-card__image,
+.home-discovery__section[data-section="recommended"] .home-discovery-card__image {
+  aspect-ratio: 1 / .92 !important;
+  min-height: 0 !important;
+}
+.home-discovery__section[data-section="sponsored"] .home-discovery-card h3,
+.home-discovery__section[data-section="recommended"] .home-discovery-card h3 {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: hidden !important;
+  min-height: 2.35em !important;
+  line-height: 1.18 !important;
+}
+.home-discovery__section[data-section="sponsored"] .home-discovery-card__desc,
+.home-discovery__section[data-section="recommended"] .home-discovery-card__desc {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: hidden !important;
+  min-height: 2.35em !important;
+  line-height: 1.35 !important;
+}
+
+/* Desktop rhythm: all homepage content bands share the same centered column
+   so their left and right edges line up visually. */
+@media (min-width: 768px) {
+  #sierra-home-categories-root,
+  #sierra-products-root,
+  #sierra-home-discovery-root,
+  #sierra-sst-showcase-root {
+    width: calc(100% - 1rem) !important;
+    max-width: 1800px !important;
+    margin-inline: auto !important;
+  }
+  #sierra-products-root [class*=" products-grid-layout-"],
+  #sierra-home-discovery-root .home-discovery,
+  #sierra-sst-showcase-root .sst-showcase-inner {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  #sierra-sst-showcase-root .sst-showcase { margin-inline: 0 !important; }
+  #ecosystem-sections-rail {
+    width: calc(100% - 1rem) !important;
+    margin-inline: auto !important;
+    padding-inline: 0 !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .home-discovery__section[data-section="sponsored"] .home-discovery__rail,
+  .home-discovery__section[data-section="recommended"] .home-discovery__rail {
+    gap: 1rem !important;
+    justify-content: flex-start !important;
+  }
+}
+@media (min-width: 769px) {
+  .home-discovery__section[data-section="recommended"] .home-discovery__rail {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+  }
+  .home-discovery__section[data-section="recommended"] .home-discovery-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .home-discovery__section[data-section="recommended"] .home-discovery-card__image {
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    flex: 0 0 auto !important;
+  }
+  .home-discovery__section[data-section="recommended"] .home-discovery-card__body {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+}
+@media (min-width: 1200px) {
+  .home-discovery__section[data-section="recommended"] .home-discovery__rail {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 769px) {
+  /* The trends rail stays on one desktop row: show five cards and hide the overflow item. */
+  .home-discovery__section[data-section="recommended"] .home-discovery__rail {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
+  }
+  .home-discovery__section[data-section="recommended"] .home-discovery__rail > :nth-child(n + 6) {
+    display: none !important;
+  }
+}
+[class^="catalogue-container-"] > aside {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+[class^="catalogue-container-"] > aside > div { position: static !important; }
+[class^="catalogue-container-"] > main {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+[class^="catalogue-container-"] > main > * { min-width: 0; }
+@media (max-width: 1023px) {
+  .catalogue-body #catalogue-page-root { height: 100dvh !important; padding-top: var(--header-height-mobile, 92px) !important; }
+  [class^="catalogue-container-"] { height: 100% !important; }
+  [class^="catalogue-container-"] > main > [class^="catalogue-toolbar-"] {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 12 !important;
+    margin-top: 0 !important;
+    background: var(--sc-canvas, #f3f4f4) !important;
+  }
+}
+@media (min-width: 1024px) {
+  .catalogue-body #catalogue-page-root { height: calc(100dvh - var(--header-height, 156px)) !important; padding-top: 0 !important; }
+}
+[class^="desktop-sidebar-"] > div {
+  border: 1px solid var(--sc-line) !important;
+  border-radius: var(--sc-radius) !important;
+  box-shadow: none !important;
+}
+[class^="catalogue-toolbar-"] {
+  min-height: 54px;
+  margin-bottom: .75rem !important;
+  padding: .5rem .75rem !important;
+  border: 1px solid var(--sc-line);
+  border-radius: var(--sc-radius);
+  background: #fff;
+}
+[class^="sort-select-"] { min-height: 42px !important; border-color: #a2a6ac !important; border-radius: var(--sc-radius-sm) !important; }
+#catalogue-page-root [class^="products-grid-catalogue_"] { gap: .75rem !important; }
+#catalogue-page-root [class^="product-card-catalogue_"] {
+  border: 1px solid var(--sc-line) !important;
+  border-radius: var(--sc-radius-sm) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+#catalogue-page-root [class^="product-card-catalogue_"]:hover { transform: translateY(-2px) !important; box-shadow: var(--sc-shadow) !important; }
+#catalogue-page-root [class^="product-card-catalogue_"]:focus-visible,
+[class^="product-card-products_"]:focus-visible {
+  outline: 3px solid #e77600 !important;
+  outline-offset: 2px !important;
+}
+#catalogue-page-root [class^="product-image-container-catalogue_"] { background: #fff !important; }
+#catalogue-page-root [class^="product-main-image-catalogue_"] { object-fit: contain !important; padding: .75rem !important; transform: none !important; }
+#catalogue-page-root [class^="product-name-catalogue_"] { font-family: "Amazon Ember", Arial, sans-serif !important; font-size: .94rem !important; font-weight: 400 !important; color: var(--sc-link) !important; }
+#catalogue-page-root [class^="current-price-catalogue_"] { color: var(--sc-ink) !important; font-weight: 700 !important; }
+#catalogue-page-root [class^="page-btn-"] { min-width: 44px !important; min-height: 44px !important; border-radius: var(--sc-radius-sm) !important; }
+#catalogue-page-root .nav-arrow {
+  width: 44px !important;
+  height: 44px !important;
+  border: 0 !important;
+  background: rgba(255,255,255,.95) !important;
+  color: var(--sc-ink) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,.24) !important;
+}
+
+/* Product detail and purchase box */
+[class^="product-page-shell-"] {
+  background: #fff !important;
+  color: var(--sc-ink) !important;
+}
+[class^="product-page-shell-"] > div:first-child { max-width: 1500px !important; }
+[class^="product-page-shell-"] .hidden.md\:flex {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+[class^="product-page-shell-"] .hidden.md\:flex > div:first-child {
+  position: sticky;
+  top: calc(var(--header-height, 120px) + .75rem);
+  align-self: flex-start;
+}
+[class^="product-page-shell-"] .hidden.md\:flex > div:last-child {
+  border-left: 1px solid var(--sc-line);
+  background: #fff;
+}
+[class^="product-page-shell-"] h1 {
+  font-family: "Amazon Ember", Arial, sans-serif !important;
+  font-size: clamp(1.5rem, 3vw, 1.9rem) !important;
+  font-weight: 400 !important;
+  line-height: 1.3 !important;
+}
+[class^="product-page-shell-"] .product-current-price { color: var(--sc-ink) !important; }
+[class^="product-page-shell-"] .desktop-image-item { border: 1px solid var(--sc-line) !important; border-radius: var(--sc-radius-sm) !important; box-shadow: none !important; }
+[class^="product-page-shell-"] .desktop-image-item img { object-fit: contain !important; }
+[class^="product-page-shell-"] .mobile-image-slide img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #fff !important;
+}
+[class^="product-page-shell-"] .product-page-mobile-gallery img,
+[class^="product-page-shell-"] .mobile-image-slide img {
+  display: block !important;
+  box-sizing: border-box !important;
+  object-fit: contain !important;
+  object-position: 50% 50% !important;
+}
+[class^="product-page-shell-"] .related-products-carousel .related-product-image {
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #fff !important;
+  transform: none !important;
+}
+[class^="product-page-shell-"] .product-page-mobile-gallery .mobile-image-carousel,
+[class^="product-page-shell-"] .product-page-mobile-gallery .product-images-mobile-root,
+[class^="product-page-shell-"] .product-page-mobile-gallery .mobile-image-container,
+[class^="product-page-shell-"] .product-page-mobile-gallery .mobile-image-slide {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+[class^="product-page-shell-"] .product-page-mobile-gallery .mobile-nav-btn {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+.product-page-body #sierra-footer-root { display: none !important; }
+.product-page-body #product-page-root {
+  height: 100dvh !important;
+  min-height: 0 !important;
+  padding-top: var(--header-height, 156px) !important;
+  overflow: hidden !important;
+}
+.product-page-body #product-page-content { height: 100% !important; min-height: 0 !important; overflow: hidden !important; }
+[class^="product-page-shell-"] {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+[class^="product-page-shell-"] > .product-page-frame {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+[class^="product-page-shell-"] .product-page-topline { flex: 0 0 auto !important; }
+[class^="product-page-shell-"] .product-modal-main-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+[class^="product-page-shell-"] .product-page-desktop-layout {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  align-items: stretch !important;
+}
+[class^="product-page-shell-"] .product-page-desktop-gallery,
+[class^="product-page-shell-"] .product-page-desktop-info {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+[class^="product-page-shell-"] .product-page-desktop-gallery {
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+}
+[class^="product-page-shell-"] .product-page-desktop-gallery.is-scrollable {
+  overflow-y: scroll !important;
+  max-height: 100% !important;
+  scrollbar-gutter: stable;
+}
+[class^="product-page-shell-"] .product-page-desktop-gallery.is-scrollable .product-images-desktop-root {
+  height: max-content !important;
+  min-height: 100% !important;
+}
+[class^="product-page-shell-"] .product-page-desktop-gallery.is-single { overflow: hidden !important; }
+[class^="product-page-shell-"] .product-page-desktop-info {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+[class^="product-page-shell-"] .product-images-desktop-root { min-height: 100%; }
+[class^="product-page-shell-"] .desktop-image-grid { padding-bottom: .25rem; }
+.product-trust-item { border-radius: var(--sc-radius-sm) !important; background: var(--sc-canvas) !important; }
+.product-trust-item i { color: var(--sc-success) !important; }
+.product-page-mobile-buybar { border-radius: var(--sc-radius) !important; }
+.product-page-buybar-action { border-radius: var(--sc-radius) !important; background: var(--sc-orange) !important; color: var(--sc-ink) !important; }
+
+@media (max-width: 1023px) {
+  .product-page-body #product-page-root {
+    height: 100dvh !important;
+    padding-top: var(--header-height-mobile, 104px) !important;
+  }
+  [class^="product-page-shell-"] > .product-page-frame {
+    padding-bottom: .75rem !important;
+  }
+  [class^="product-page-shell-"] .product-modal-main-scroll {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  [class^="product-page-shell-"] .md\:hidden {
+    min-height: 100%;
+  }
+  [class^="product-page-shell-"] .product-page-mobile-card {
+    min-height: 100%;
+  }
+  [class^="product-page-shell-"] .product-page-mobile-info {
+    max-height: none;
+  }
+  .product-page-body,
+  .product-page-body html { height: auto !important; overflow-y: auto !important; }
+  .product-page-body #product-page-root {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+  .product-page-body #product-page-content,
+  [class^="product-page-shell-"] {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  [class^="product-page-shell-"] > .product-page-frame {
+    height: auto !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+  [class^="product-page-shell-"] .product-modal-main-scroll {
+    display: block !important;
+    overflow: visible !important;
+  }
+  [class^="product-page-shell-"] .md\:hidden { display: block !important; }
+  [class^="product-page-shell-"] .product-page-desktop-layout { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+  .product-page-body #product-page-root {
+    height: calc(100dvh - var(--header-height, 156px)) !important;
+    padding-top: 0 !important;
+  }
+}
+
+/* Cart and checkout */
+.cart-overlay { background: rgba(0,0,0,.55) !important; backdrop-filter: none !important; }
+.cart-container {
+  max-width: 540px !important;
+  border-left: 1px solid var(--sc-line) !important;
+  background: #fff !important;
+  box-shadow: -12px 0 32px rgba(0,0,0,.25) !important;
+}
+.cart-container .cart-item {
+  border: 0 !important;
+  border-bottom: 1px solid var(--sc-line) !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+.cart-container .continue-shopping-btn { min-height: 46px !important; border-radius: var(--sc-radius) !important; }
+.cart-container > div:first-of-type { padding: 1rem 1.25rem !important; border-bottom: 1px solid var(--sc-line) !important; background: #fff !important; }
+.cart-container h2 { font-family: "Amazon Ember", Arial, sans-serif !important; font-size: 1.25rem !important; font-weight: 700 !important; }
+.cart-container .close-cart-btn { width: 44px !important; height: 44px !important; border: 1px solid var(--sc-line) !important; border-radius: 50% !important; background: #fff !important; }
+[class^="checkout-container-"] {
+  border-radius: var(--sc-radius) !important;
+  background: #fff !important;
+  box-shadow: 0 18px 60px rgba(0,0,0,.3) !important;
+}
+[class^="checkout-modal-"] { background: rgba(0,0,0,.62) !important; backdrop-filter: none !important; }
+[class^="checkout-container-"] > div:first-child { border: 0 !important; border-radius: var(--sc-radius) var(--sc-radius) 0 0 !important; background: var(--sc-navy) !important; }
+[class^="checkout-container-"] > div:first-child h2 { color: #fff !important; font-family: "Amazon Ember", Arial, sans-serif !important; font-size: 1.4rem !important; font-weight: 700 !important; }
+[class^="checkout-container-"] > div:first-child h2 i { color: var(--sc-orange) !important; }
+[class^="checkout-container-"] > div:first-child .close-checkout { width: 44px !important; height: 44px !important; color: #fff !important; }
+[class^="checkout-container-"] > div:nth-child(2),
+[class^="delivery-section-"] { border-color: var(--sc-line) !important; background: #f7fafa !important; }
+[class^="checkout-content-"] { background: #fff !important; }
+[class^="delivery-section-"] { border-radius: var(--sc-radius-sm) !important; }
+.apply-promo { min-height: 46px !important; border: 1px solid #a2a6ac !important; border-radius: var(--sc-radius) !important; background: #fff !important; color: var(--sc-ink) !important; font-weight: 700 !important; }
+[class^="checkout-container-"] input,
+[class^="checkout-container-"] select { min-height: 46px !important; border-color: #879596 !important; border-radius: var(--sc-radius-sm) !important; }
+[class^="checkout-container-"] input:focus,
+[class^="checkout-container-"] select:focus { border-color: var(--sc-orange) !important; box-shadow: 0 0 0 2px rgba(255,164,28,.3) !important; }
+
+/* Compact trust/review/footer */
+#sierra-commentaire-root {
+  width: 100% !important;
+  max-width: none !important;
+  margin-block: 0 1rem !important;
+  padding: 1.25rem 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#sierra-footer-root > [class^="footer-"] { background: var(--sc-footer-bg) !important; }
+[class^="footer-heading-"] { color: var(--sc-footer-heading) !important; font-family: "Amazon Ember", Arial, sans-serif !important; }
+[class^="footer-links-"] a,
+[class^="footer-contact-item-"] a { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* Devise HTG/USD : fond volontairement opaque pour rester visible même quand
+   la couleur dynamique du header est identique à celle du bouton. Cette règle
+   s'applique à toutes les tailles d'écran et aux deux sélecteurs. */
+#headerNebulaX92 #desktopCurrencySelector,
+#headerNebulaX92 #mobileCurrencySelector,
+#headerNebulaX92 .currency-selector {
+  background-color: #f8fafc !important;
+  color: #1f2937 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .14) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+}
+
+@media (max-width: 370px) {
+  #headerNebulaX92 .cart-icon-shell { width: 42px !important; height: 42px !important; }
+  #headerNebulaX92 .cart-icon-shell .mobile-icon { font-size: 1.25rem !important; }
+}
+#headerNebulaX92 .currency-selector:hover,
+#headerNebulaX92 .currency-selector:focus {
+  background-color: #eef2f7 !important;
+  border-color: #94a3b8 !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+#headerNebulaX92 .currency-selector option {
+  background: #fff !important;
+  color: #17212b !important;
+}
+
+@media (max-width: 1024px) {
+  #headerNebulaX92 .mobile-header-inner { padding: .45rem .65rem !important; gap: .4rem !important; }
+  #headerNebulaX92 .mobile-nav-scroll {
+    margin-inline: -.65rem !important;
+    padding: .2rem .65rem 0 !important;
+    background: transparent !important;
+  }
+  #headerNebulaX92 .mobile-nav-all,
+  #headerNebulaX92 .mobile-nav-item {
+    min-height: 42px !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+  }
+}
+/* 768-1024px (tablets, small laptops) previously fell into a gap: the block above
+   only sized the nav pills, and nothing gave them the same pastel colors the
+   ≤767px block (below) and the ≥769px desktop block (above, in the
+   @media (min-width: 769px) rule) both already have — leaving a plain
+   white-text-on-transparent look that didn't match either neighbor. Same colors,
+   same href-matching approach as those two blocks. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  #headerNebulaX92 .mobile-nav-all,
+  #headerNebulaX92 .mobile-nav-item {
+    border: 1px solid rgba(15,17,17,.14) !important;
+    background: rgba(255,255,255,.94) !important;
+    color: var(--sc-ink) !important;
+  }
+  #headerNebulaX92 .mobile-nav-all:hover,
+  #headerNebulaX92 .mobile-nav-item:hover {
+    background: var(--sc-gold) !important;
+    border-color: var(--sc-gold-border) !important;
+    color: var(--sc-ink) !important;
+  }
+  #headerNebulaX92 .mobile-nav-all { background: #ffe3a3 !important; }
+  #headerNebulaX92 .mobile-nav-items > a.affiliate-nav-link,
+  #headerNebulaX92 .mobile-nav-items > a[href*="affiliate"] {
+    background: #dff4ef !important;
+    color: #0e756b !important;
+    border-color: rgba(14,117,107,.24) !important;
+    box-shadow: 0 3px 10px rgba(14,117,107,.12) !important;
+  }
+  #headerNebulaX92 .cart-icon-shell { width: 46px !important; height: 46px !important; }
+  #headerNebulaX92 .cart-icon-shell .mobile-icon { font-size: 1.35rem !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="printing"] { background: #e8ddff !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="vendor"] { background: #ffe0bd !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="auto-parts"] { background: #cfe7ff !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="education"] { background: #fff0b8 !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="services.html"] { background: #d9e8ff !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="health"] { background: #f3d8e8 !important; }
+  #headerNebulaX92 .mobile-smartsolution-menu > summary { background: #d9f3e5 !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-smartsolution-menu > summary.mobile-nav-item:hover,
+  #headerNebulaX92 .mobile-smartsolution-menu[open] > summary.mobile-nav-item {
+    background: #bfe8d2 !important;
+    color: #145c3a !important;
+    border-color: rgba(20,92,58,.28) !important;
+    box-shadow: 0 3px 10px rgba(20,92,58,.12) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  [class^="products-grid-header-"] { padding: .75rem !important; }
+  .home-section-heading { min-height: 54px !important; padding: .75rem !important; }
+  .home-section-heading .home-section-title { font-size: 1.15rem !important; }
+  .services-teaser-head.home-section-heading { flex-wrap: wrap !important; }
+  .services-teaser-head.home-section-heading .services-teaser-actions { width: 100%; }
+  [class^="products-grid-shell-"] { gap: .5rem !important; }
+  [class^="product-card-products_"] .product-main-image { padding: .35rem !important; }
+  [class^="product-card-products_"] .product-content > div:last-child { padding: 0 .6rem .65rem !important; }
+  [class^="product-card-products_"] .product-store-link { min-height: 44px; display: flex !important; align-items: center; }
+  #sierra-home-discovery-root { padding-inline: .5rem !important; }
+  #sierra-products-root {
+    width: calc(100% - 1rem) !important;
+    margin-inline: .5rem !important;
+  }
+  #sierra-products-root [class^="products-carousel-"] {
+    margin-right: -.5rem !important;
+    padding-right: .5rem !important;
+  }
+  #sierra-products-root [class^="products-carousel-"] > .flex {
+    padding-left: .5rem !important;
+    padding-right: 24vw !important;
+  }
+  #sierra-products-root [class^="products-carousel-"] [class^="product-card-products_"] {
+    width: clamp(220px, 68vw, 260px) !important;
+    max-width: none !important;
+  }
+  .home-discovery__section { padding: .75rem 0 .75rem .75rem !important; }
+  .home-discovery__heading { padding-right: .75rem !important; }
+  .home-discovery__rail .home-discovery-card { flex-basis: 72vw !important; }
+  [class^="catalogue-container-"] { padding: .5rem !important; }
+  [class^="catalogue-toolbar-"] {
+    position: sticky;
+    top: var(--header-height-mobile, 104px);
+    z-index: 8;
+    transition: top .35s ease;
+  }
+  html.smart-header-hidden [class^="catalogue-toolbar-"] { top: 0; }
+  #catalogue-page-root [class^="products-grid-catalogue_"] { gap: .5rem !important; }
+  #catalogue-page-root [class^="product-card-catalogue_"] { border-radius: var(--sc-radius-sm) !important; box-shadow: none !important; }
+  [class^="product-page-shell-"] > div:first-child { padding-inline: .5rem !important; }
+  [class^="product-page-shell-"] .md\:hidden > div { border-radius: 0 !important; box-shadow: none !important; }
+  [class^="product-page-shell-"] .md\:hidden > div > div:last-child > div { border-radius: 0 !important; }
+}
+
+@media (max-width: 767px) {
+  #headerNebulaX92 {
+    background: linear-gradient(180deg, var(--hero-dominant-color, var(--sc-navy)) 0, var(--hero-dominant-color, var(--sc-navy)) 70px, transparent 70px) !important;
+  }
+  #headerNebulaX92 .mobile-header-inner,
+  #headerNebulaX92 .mobile-top-bar,
+  #headerNebulaX92 .mobile-nav-scroll { background: transparent !important; }
+  #headerNebulaX92 .mobile-nav-items { gap: .55rem !important; }
+  #headerNebulaX92 .mobile-nav-item,
+  #headerNebulaX92 .mobile-nav-all {
+    min-height: 38px !important;
+    border: 1px solid rgba(255,255,255,.2) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+  }
+  #headerNebulaX92 .mobile-nav-all { background: #ffe3a3 !important; color: var(--sc-ink) !important; border-color: rgba(15,17,17,.14) !important; }
+  /* L'affiliation doit rester une pastille colorée sur mobile : le style
+     générique de la rangée ne doit pas la rendre transparente. */
+  #headerNebulaX92 .mobile-nav-items > a.affiliate-nav-link,
+  #headerNebulaX92 .mobile-nav-items > a[href*="affiliate"] {
+    background: #dff4ef !important;
+    color: #0e756b !important;
+    border-color: rgba(14,117,107,.24) !important;
+    box-shadow: 0 3px 10px rgba(14,117,107,.12) !important;
+  }
+  #headerNebulaX92 .mobile-nav-items > a.affiliate-nav-link:hover,
+  #headerNebulaX92 .mobile-nav-items > a[href*="affiliate"]:hover {
+    background: #c8ebe4 !important;
+    color: #0a5b54 !important;
+  }
+  #headerNebulaX92 .mobile-nav-items > a[href*="printing"] { background: #e8ddff !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="vendor"] { background: #ffe0bd !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="auto-parts"] { background: #cfe7ff !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="education"] { background: #fff0b8 !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="services.html"] { background: #d9e8ff !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-nav-items > a[href*="health"] { background: #f3d8e8 !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-smartsolution-menu > summary { background: #d9f3e5 !important; color: var(--sc-ink) !important; }
+  #headerNebulaX92 .mobile-smartsolution-menu > summary.mobile-nav-item:hover,
+  #headerNebulaX92 .mobile-smartsolution-menu[open] > summary.mobile-nav-item {
+    background: #bfe8d2 !important;
+    color: #145c3a !important;
+    border-color: rgba(20,92,58,.28) !important;
+    box-shadow: 0 3px 10px rgba(20,92,58,.12) !important;
+  }
+  /* Match the desktop "Catégories" button tone on mobile. */
+  #headerNebulaX92 .mobile-nav-all { background: #ffe3a3 !important; color: var(--sc-ink) !important; border-color: rgba(15,17,17,.14) !important; }
+  #home-hero-categories-shell { overflow: visible !important; }
+  #sierra-hero-root .posterHeroRoot913 { height: 300px !important; min-height: 0 !important; }
+  #sierra-hero-root .posterHeroViewport913,
+  #sierra-hero-root .posterHeroTrack913,
+  #sierra-hero-root .posterHeroSlide913,
+  #sierra-hero-root .posterHeroPoster913 { height: 100% !important; min-height: 0 !important; }
+  #sierra-home-categories-root { position: relative; z-index: 2; margin-top: -54px !important; padding-top: 0 !important; }
+  #sierra-home-categories-root .categories-row {
+    display: flex !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    touch-action: pan-x !important;
+    -webkit-overflow-scrolling: touch !important;
+    pointer-events: auto !important;
+  }
+  #sierra-home-categories-root .category-card--grouped { flex-basis: 82vw !important; max-width: 330px !important; }
+
+  /* Petit écran : le poster ne doit pas conserver sa hauteur intrinsèque,
+     sinon un vide apparaît entre la bannière et le rail. */
+  #sierra-hero-root,
+  #sierra-hero-root .posterHeroRoot913,
+  #sierra-hero-root .posterHeroViewport913,
+  #sierra-hero-root .posterHeroTrack913,
+  #sierra-hero-root .posterHeroSlide913,
+  #sierra-hero-root .posterHeroPoster913 {
+    height: 300px !important;
+    min-height: 0 !important;
+  }
+  #sierra-hero-root .posterHeroPosterImage913 {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    object-fit: cover !important;
+    object-position: center !important;
+  }
+  #sierra-home-categories-root {
+    margin-top: -108px !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding-inline: 0 .15rem !important;
+    padding-bottom: .75rem !important;
+  }
+  #sierra-home-categories-root .categories-wrapper-carousel {
+    overflow: visible !important;
+  }
+  #sierra-home-categories-root .categories-row {
+    gap: .72rem !important;
+    padding-right: 24vw !important;
+    scroll-padding-inline: .2rem 24vw !important;
+  }
+  #sierra-home-categories-root .categories-row .category-card--grouped {
+    flex: 0 0 clamp(238px, calc(100vw - 118px), 292px) !important;
+    width: clamp(238px, calc(100vw - 118px), 292px) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+/* ============================================================
+   Ultra-wide (2K / 4K) correction
+   ------------------------------------------------------------
+   The categories band lives inside #home-hero-categories-shell
+   and was pinned to the left (margin 0) with an 1800px cap, so
+   on very wide screens a large empty strip of the hero gradient
+   showed on its right. Let it fill the shell like the hero band
+   above it so both share the same left/right edges.
+   Placed last in the file so it wins over the earlier desktop
+   caps at equal specificity.
+   ============================================================ */
+@media (min-width: 1200px) {
+  #home-hero-categories-shell #sierra-hero-root,
+  #home-hero-categories-shell #sierra-home-categories-root {
+    max-width: none !important;
+    margin-inline: auto !important;
+  }
+}
+
+/* ============================================================
+   Ultra-wide (2K / 4K) header vertical rhythm
+   ------------------------------------------------------------
+   Before: the dark utility band stopped at a hard 80px while the
+   top row (logo/search) is ~66px tall with a 1rem top padding, so
+   the content sat flush against the bottom of the band with no
+   breathing room; meanwhile the nav row had margin-top .65rem +
+   grid gap on top of the transparent area, so it looked pushed
+   too far down. Result: cramped below the top row, loose above
+   the sub-menu.
+
+   Now: the band height matches the top row + symmetric vertical
+   padding, and the nav row sits right under it with equal top and
+   bottom padding of its own.
+   ============================================================ */
+@media (min-width: 1600px) {
+  #headerNebulaX92 {
+    background: linear-gradient(
+      to bottom,
+      var(--hero-dominant-color, var(--sc-navy)) 0,
+      var(--hero-dominant-color, var(--sc-navy)) 104px,
+      transparent 104px,
+      transparent 100%
+    ) !important;
+  }
+
+  #headerNebulaX92 .desktop-header-inner {
+    padding: 1.15rem 2rem 0 !important;
+    gap: 0 !important;
+  }
+
+  #headerNebulaX92 .desktop-top-row {
+    padding-bottom: 1.15rem !important;
+  }
+
+  #headerNebulaX92 .desktop-nav-row {
+    margin-top: 0 !important;
+    margin-inline: -2rem !important;
+    padding: 0.85rem 2rem !important;
+  }
+}
+
+@media (max-width: 370px) {
+  #headerNebulaX92 .cart-icon-shell { width: 42px !important; height: 42px !important; }
+  #headerNebulaX92 .cart-icon-shell .mobile-icon { font-size: 1.25rem !important; }
+}

@@ -1,0 +1,141 @@
+diff --git a/firestore.rules b/firestore.rules
+index 09de994..d861e51 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -1288,7 +1288,7 @@ service cloud.firestore {
+       // Medical results are server-created and readable only by the patient, owning laboratory,
+       // authorized prescribing doctor, or administrator. No direct client writes are allowed.
+       allow read: if isAdmin() || (signedIn() && (
+-        resource.data.patientUid == request.auth.uid ||
++        (resource.data.patientUid == request.auth.uid && resource.data.status == 'RESULT_AVAILABLE' && 'patientTransferredAt' in resource.data) ||
+         resource.data.laboratoryUid == request.auth.uid ||
+         (resource.data.status in ['RESULT_AVAILABLE', 'COMPLETED'] &&
+           exists(/databases/$(database)/documents/healthOrders/$(resource.data.orderId)) &&
+@@ -1296,6 +1296,24 @@ service cloud.firestore {
+       ));
+       allow write: if false;
+     }
++
++    // Partner portal result metadata and short-lived upload sessions are never read
++    // directly. Every list, review, and file access is authorized and audited by Cloud Functions.
++    match /healthPartnerResults/{resultId} {
++      allow read, write: if false;
++    }
++    match /healthPartnerUploadSessions/{sessionId} {
++      allow read, write: if false;
++    }
++    match /healthPartnerLogins/{partnerId} {
++      allow read, write: if false;
++    }
++    match /healthPartnerResultClaims/{claimId} {
++      allow read, write: if false;
++    }
++    match /healthResultRequirements/{requirementId} {
++      allow read, write: if false;
++    }
+     // Doctor-issued e-prescriptions (medications / lab exam requests / imaging requests),
+     // written only during or after a teleconsultation the doctor conducted — see
+     // healthDoctorIssuePrescription. Distinct from healthPrescriptions (a scanned paper
+@@ -1352,9 +1370,11 @@ service cloud.firestore {
+     match /healthExamResults/{resultId} {
+       allow read: if signedIn() && (
+         resource.data.providerUid == request.auth.uid ||
+-        resource.data.patientUid == request.auth.uid ||
+-        resource.data.prescribingDoctorUid == request.auth.uid ||
+-        ('authorizedDoctorUids' in resource.data && request.auth.uid in resource.data.authorizedDoctorUids)
++        (resource.data.status == 'RESULT_AVAILABLE' && 'patientTransferredAt' in resource.data && (
++          resource.data.patientUid == request.auth.uid ||
++          resource.data.prescribingDoctorUid == request.auth.uid ||
++          ('authorizedDoctorUids' in resource.data && request.auth.uid in resource.data.authorizedDoctorUids)
++        ))
+       );
+       allow write: if false;
+     }
+diff --git a/storage.rules b/storage.rules
+index e9d0bb4..1c7e97d 100644
+--- a/storage.rules
++++ b/storage.rules
+@@ -228,7 +228,23 @@ service firebase.storage {
+     // Smart Cut Health — Phase 1 (Pharmacy). Additive only.
+     // ============================================================
+
+-    function isHealthAdminRequester() { return isAdminRequester(); }
++    function isHealthAdminRequester() {
++      return isAdminRequester() || (isSignedIn() &&
++        firestore.exists(/databases/(default)/documents/platformRoles/$(request.auth.uid)) &&
++        firestore.get(/databases/(default)/documents/platformRoles/$(request.auth.uid)).data.status == 'active' &&
++        firestore.get(/databases/(default)/documents/platformRoles/$(request.auth.uid)).data.role in ['super_admin', 'platform_admin', 'health_laboratory_admin', 'health_imaging_admin', 'admin_orders']);
++    }
++
++    function isActiveResultsPartner(uid) {
++      return firestore.exists(/databases/(default)/documents/clients/$(uid)) &&
++        (('partnerStatus' in firestore.get(/databases/(default)/documents/clients/$(uid)).data &&
++          firestore.get(/databases/(default)/documents/clients/$(uid)).data.partnerStatus == 'active') ||
++         (!('partnerStatus' in firestore.get(/databases/(default)/documents/clients/$(uid)).data) &&
++          ((('labStatus' in firestore.get(/databases/(default)/documents/clients/$(uid)).data) &&
++            firestore.get(/databases/(default)/documents/clients/$(uid)).data.labStatus in ['verified', 'approved', 'active']) ||
++           (('imagingStatus' in firestore.get(/databases/(default)/documents/clients/$(uid)).data) &&
++            firestore.get(/databases/(default)/documents/clients/$(uid)).data.imagingStatus in ['verified', 'approved', 'active']))));
++    }
+
+     // Prescription uploads carry real health data — the FIRST genuinely private
+     // (non-`allow read: if true`) path in this file. The path segment is
+@@ -331,9 +347,43 @@ service firebase.storage {
+       allow update, delete: if false;
+     }
+
++    // Partner results use a short-lived server-created upload session. Reads always
++    // pass through a short-lived, audited Cloud Function URL.
++    match /health-partner-results/{partnerUid}/{orderId}/{sessionId}/{fileId} {
++      allow read: if false;
++      allow create: if isSignedIn() && request.auth.uid == partnerUid &&
++        firestore.exists(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)) &&
++        firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.partnerUid == request.auth.uid &&
++        firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.orderId == orderId &&
++        firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.status == 'OPEN' &&
++        firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.expiresAt > request.time &&
++        firestore.exists(/databases/(default)/documents/healthOrders/$(orderId)) &&
++        ((firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.source == 'smartcut-health' && isHealthAdminRequester() && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerUid == 'smartcut-health') ||
++         (firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.source == 'external-partner' && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerUid == request.auth.uid && isActiveResultsPartner(request.auth.uid))) &&
++        ((firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.providerType == 'laboratory' &&
++          firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.kind == 'laboratory_exam' &&
++          firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerType == 'laboratory') ||
++         (firestore.get(/databases/(default)/documents/healthPartnerUploadSessions/$(sessionId)).data.providerType == 'imaging' &&
++          firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.kind == 'imaging' &&
++          firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerType == 'imaging')) &&
++        (isPdf() || hasContentType('image/(jpeg|png)')) && maxSize(15);
++      allow update, delete: if false;
++    }
++
++    // Partner contracts and compliance documents are private administrative files.
++    // Reads are only issued through an audited, short-lived Cloud Function URL.
++    match /health-partner-contracts/{adminAndPartner}/{fileId} {
++      allow read: if false;
++      allow create: if isHealthAdminRequester() && request.auth.uid == adminAndPartner.split('__')[0] &&
++        request.resource.metadata.uploadedByUid == request.auth.uid &&
++        request.resource.metadata.partnerUid == adminAndPartner.split('__')[1] &&
++        (isPdf() || hasContentType('image/(jpeg|png)')) && maxSize(10);
++      allow update, delete: if false;
++    }
++
+     // Laboratory results uploaded by the assigned laboratory, never public.
+     match /health-lab-results/{patientUid}/{orderId}/{examId}/{resultId}/{fileName} {
+-      allow read: if isSignedIn() && (isHealthAdminRequester() || (firestore.exists(/databases/(default)/documents/healthOrders/$(orderId)) && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.kind == 'laboratory_exam' && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.status in ['RESULT_AVAILABLE', 'COMPLETED'] && (firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerUid == request.auth.uid || firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.patientUid == request.auth.uid)));
++      allow read: if isSignedIn() && (isHealthAdminRequester() || (firestore.exists(/databases/(default)/documents/healthOrders/$(orderId)) && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.kind == 'laboratory_exam' && (firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerUid == request.auth.uid || (firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.patientUid == request.auth.uid && firestore.exists(/databases/(default)/documents/healthLabResults/$(resultId)) && firestore.get(/databases/(default)/documents/healthLabResults/$(resultId)).data.status == 'RESULT_AVAILABLE' && 'patientTransferredAt' in firestore.get(/databases/(default)/documents/healthLabResults/$(resultId)).data))));
+       allow create: if isSignedIn() && firestore.exists(/databases/(default)/documents/healthOrders/$(orderId)) && ((isHealthAdminRequester() && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerUid == 'smartcut-health') || request.auth.uid == firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerUid) && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.providerType == 'laboratory' && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.kind == 'laboratory_exam' && firestore.get(/databases/(default)/documents/healthOrders/$(orderId)).data.patientUid == patientUid && (isPdf() || hasContentType('image/(jpeg|png|heic)')) && maxSize(15);
+       allow update, delete: if false;
+     }
+@@ -423,11 +473,11 @@ service firebase.storage {
+     // broad read rule would silently override every private Health match above.
+     match /{topLevel}/{allPaths=**} {
+       allow read: if !(topLevel in [
+-        'health-prescriptions', 'health-pharmacy-docs', 'health-doctor-docs',
++        'health-prescriptions', 'health-pharmacy-docs', 'health-doctor-docs', 'health-partner-contracts',
+         'health-lab-docs', 'health-imaging-docs',
+          // Health result roots are excluded from the legacy public fallback.
+          // The explicit private match above governs every laboratory result file.
+-        'health-lab-results', 'health-imaging-results', 'health-exam-results',
++        'health-lab-results', 'health-imaging-results', 'health-exam-results', 'health-partner-results',
+         'health-session-media', 'sst-courses', 'education-content',
+         'marketplace-public', 'marketplace-private', 'auto-parts'
+       ]);

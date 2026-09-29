@@ -1,0 +1,64 @@
+{
+  "categories": [
+    {
+      "category": "Voies entérales / digestives",
+      "subcategories": ["Orale (PO)", "Buccale", "Oromucosale", "Sublinguale", "Gingivale", "Dentaire", "Gastro-entérale", "Gastrique", "Duodénale", "Jéjunale", "Entérale par sonde", "Rectale"]
+    },
+    {
+      "category": "Voies parentérales / injectables",
+      "subcategories": ["Intraveineuse (IV)", "Intramusculaire (IM)", "Sous-cutanée (SC)", "Intradermique (ID)", "Intra-artérielle (IA)", "Intraarticulaire", "Intra-osseuse (IO)", "Intrathécale", "Épidurale", "Intracisternale", "Intraventriculaire cérébrale", "Intracardiaque", "Intrapéritonéale", "Intrapleurale", "Intratumorale", "Intralésionnelle", "Intracavitaire", "Intrabursale", "Intratendineuse", "Périarticulaire", "Périneurale", "Intraoculaire", "Intracamérulaire", "Intravitréenne", "Sous-conjonctivale", "Rétrobulbaire", "Péribulbaire"]
+    },
+    {
+      "category": "Voies cutanées",
+      "subcategories": ["Cutanée / Topique", "Transdermique", "Percutanée", "Intradermique", "Application locale sur plaie"]
+    },
+    {
+      "category": "Voies respiratoires",
+      "subcategories": ["Inhalée", "Pulmonaire", "Par nébulisation", "Endotrachéale", "Intratrachéale"]
+    },
+    {
+      "category": "Voies nasales",
+      "subcategories": ["Nasale", "Intranasale"]
+    },
+    {
+      "category": "Voies ophtalmiques",
+      "subcategories": ["Ophtalmique", "Conjonctivale", "Sous-conjonctivale", "Intracamérulaire", "Intravitréenne", "Péribulbaire", "Rétrobulbaire"]
+    },
+    {
+      "category": "Voies auriculaires",
+      "subcategories": ["Otique"]
+    },
+    {
+      "category": "Voies génitales et gynécologiques",
+      "subcategories": ["Vaginale", "Intravaginale", "Cervicale / Endocervicale", "Intra-utérine", "Urétrale"]
+    },
+    {
+      "category": "Voies urinaires",
+      "subcategories": ["Urétrale", "Intravesicale / Vésicale", "Irrigation vésicale"]
+    },
+    {
+      "category": "Voies neurologiques / rachidiennes",
+      "subcategories": ["Intrathécale", "Épidurale / Péridurale", "Intracisternale", "Intraventriculaire cérébrale", "Périneurale", "Intraspinale"]
+    },
+    {
+      "category": "Voies articulaires et musculosquelettiques",
+      "subcategories": ["Intra-articulaire", "Périarticulaire", "Intrabursale", "Intratendineuse", "Intramusculaire", "Intralésionnelle"]
+    },
+    {
+      "category": "Voies cardiovasculaires spécialisées",
+      "subcategories": ["Intraveineuse", "Intra-artérielle", "Intracardiaque", "Intracoronaire"]
+    },
+    {
+      "category": "Voies séreuses / cavitaires",
+      "subcategories": ["Intrapéritonéale", "Intrapleurale", "Intracavitaire", "Intra-abdominale"]
+    },
+    {
+      "category": "Administration locale spécialisée",
+      "subcategories": ["Intralésionnelle", "Intratumorale", "Intracavitaire", "Implantation", "Insertion locale"]
+    },
+    {
+      "category": "Autres voies / usages particuliers",
+      "subcategories": ["Irrigation", "Lavage", "Dialyse péritonéale", "Hémodialyse / circuit extracorporel", "Extracorporelle", "Implantation", "Infiltration locale"]
+    }
+  ]
+}

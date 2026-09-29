@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b3d35">
+  <title>Portail Partenaires Résultats · Smart Cut Health</title>
+  <link rel="stylesheet" href="./site-foundation.css?v=20260929-1">
+  <link rel="stylesheet" href="./health-partner-results.css?v=20260929-3">
+</head>
+<body class="partner-results-page">
+  <header class="pr-topbar">
+    <a class="pr-brand" href="./"><span>SC</span><strong>Smart Cut Health<small>Portail Partenaires Résultats</small></strong></a>
+    <div id="pr-user" class="pr-user" hidden></div>
+  </header>
+  <main class="pr-shell">
+    <section id="pr-login" class="pr-login pr-panel">
+      <p class="pr-eyebrow">Accès sécurisé</p>
+      <h1>Portail Partenaires Résultats</h1>
+      <p>Laboratoire · Imagerie médicale · Rapports radiologiques</p>
+      <form id="pr-login-form" class="pr-form">
+        <label>Identifiant partenaire ou e-mail administrateur<input id="pr-login-id" autocomplete="username" required></label>
+        <label>Mot de passe<input id="pr-login-password" type="password" autocomplete="current-password" required></label>
+        <button class="pr-primary">Se connecter</button>
+        <p id="pr-login-status" class="pr-status" role="status"></p>
+      </form>
+    </section>
+
+    <section id="pr-password-change" class="pr-login pr-panel" hidden>
+      <p class="pr-eyebrow">Première connexion</p>
+      <h1>Créer votre mot de passe</h1>
+      <p>Choisissez un mot de passe fort pour sécuriser le compte partenaire.</p>
+      <form id="pr-password-form" class="pr-form">
+        <label>Nouveau mot de passe<input id="pr-new-password" type="password" minlength="12" autocomplete="new-password" required></label>
+        <label>Confirmer le mot de passe<input id="pr-confirm-password" type="password" minlength="12" autocomplete="new-password" required></label>
+        <button class="pr-primary">Mettre à jour</button>
+        <p id="pr-password-status" class="pr-status" role="status"></p>
+      </form>
+    </section>
+
+    <section id="pr-app" hidden>
+      <div class="pr-heading">
+        <div><p class="pr-eyebrow">Espace sécurisé</p><h1 id="pr-title">Résultats</h1><p id="pr-identity"></p></div>
+        <button id="pr-logout" class="pr-quiet">Déconnexion</button>
+      </div>
+      <nav id="pr-nav" class="pr-nav" aria-label="Navigation portail"></nav>
+      <section id="pr-notice" class="pr-notice" role="status" hidden></section>
+
+      <section id="pr-partner-view" class="pr-view" hidden>
+        <article class="pr-panel" id="pr-partner-metrics-panel"><p class="pr-eyebrow">Vue d’ensemble</p><h2>Activité du partenaire</h2><div class="pr-metrics" id="pr-metrics"></div></article>
+        <article class="pr-panel" id="pr-lookup-panel">
+          <p class="pr-eyebrow">Commandes à traiter</p><h2>Rechercher une commande</h2>
+          <p>Seules les commandes payées et affectées à votre établissement peuvent être ouvertes.</p>
+          <form id="pr-lookup-form" class="pr-inline"><label>Numéro de commande<input id="pr-order-id" autocomplete="off" required placeholder="Ex. SC-H-XXXXXXXX"></label><button class="pr-primary">Rechercher la commande</button></form>
+          <div id="pr-order-summary"></div>
+        </article>
+        <article id="pr-upload-card" class="pr-panel" hidden>
+          <p class="pr-eyebrow">Dépôt sécurisé</p><h2>Fichiers à fournir</h2>
+          <div id="pr-checklist" class="pr-checklist"></div>
+          <progress id="pr-progress" max="1" value="0"></progress><p id="pr-progress-label"></p><p id="pr-progress-state"></p>
+          <form id="pr-upload-form" class="pr-form">
+            <div id="pr-file-fields" class="pr-columns"></div>
+            <label>Date de réalisation<input id="pr-performed-at" type="date"></label>
+            <label>Commentaire facultatif<textarea id="pr-comment" rows="3" maxlength="1000"></textarea></label>
+            <label class="pr-confirm"><input id="pr-confirm-order" type="checkbox" required> Je confirme que les fichiers correspondent au patient, à l’examen et au numéro de commande affichés.</label>
+            <button id="pr-submit-result" class="pr-primary" disabled>Valider et transmettre les résultats</button>
+            <p id="pr-upload-status" class="pr-status" role="status"></p>
+          </form>
+        </article>
+        <article id="pr-partner-orders-panel" class="pr-panel"><p class="pr-eyebrow">Suivi</p><h2>Commandes à traiter</h2><div id="pr-partner-orders" class="pr-list"></div></article>
+        <article id="pr-own-results-panel" class="pr-panel"><p class="pr-eyebrow">Historique des dépôts</p><h2>Résultats déposés</h2><div id="pr-own-results" class="pr-list">Chargement…</div></article>
+        <article id="pr-corrections-panel" class="pr-panel"><p class="pr-eyebrow">Action requise</p><h2>Corrections demandées</h2><div id="pr-corrections-list" class="pr-list"></div></article>
+        <article id="pr-partner-profile-panel" class="pr-panel"><p class="pr-eyebrow">Établissement</p><h2>Mon profil</h2><div id="pr-partner-profile"></div></article>
+        <article id="pr-partner-audit-panel" class="pr-panel"><p class="pr-eyebrow">Traçabilité</p><h2>Historique de mes actions</h2><div id="pr-partner-audit" class="pr-list"></div></article>
+        <article id="pr-partner-security-panel" class="pr-panel"><p class="pr-eyebrow">Sécurité</p><h2>Modifier mon mot de passe</h2>
+          <form id="pr-security-form" class="pr-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="12" autocomplete="new-password" required></label><label>Confirmer le mot de passe<input name="confirmation" type="password" minlength="12" autocomplete="new-password" required></label><button class="pr-primary">Mettre à jour le mot de passe</button><p id="pr-security-status" class="pr-status" role="status"></p></form>
+        </article>
+      </section>
+
+      <section id="pr-admin-view" class="pr-view" hidden>
+        <article class="pr-panel" id="pr-overview-panel"><p class="pr-eyebrow">Vue d’ensemble</p><h2>Activité du portail</h2><div id="pr-admin-metrics" class="pr-metrics"></div></article>
+        <article class="pr-panel" id="pr-admin-alerts-panel"><p class="pr-eyebrow">Litiges et anomalies</p><h2>Alertes du portail</h2><div id="pr-admin-alerts" class="pr-list"></div></article>
+
+        <article class="pr-panel" id="pr-internal-panel">
+          <p class="pr-eyebrow">Flux interne Smart Cut Health</p><h2>Examens réalisés par Smart Cut Health</h2>
+          <p>Identifiez la commande; le patient et l’examen sont récupérés automatiquement. Aucun paiement de partenaire externe ne sera généré.</p>
+          <form id="pr-internal-lookup-form" class="pr-inline"><label>Numéro de commande<input id="pr-internal-order-id" autocomplete="off" required placeholder="Numéro exact de commande"></label><button class="pr-primary">Rechercher</button></form>
+          <div id="pr-internal-summary"></div>
+          <article id="pr-internal-upload-card" class="pr-panel" hidden><p class="pr-eyebrow">Dépôt interne sécurisé</p><h3>Fichiers à fournir</h3><div id="pr-internal-checklist" class="pr-checklist"></div><progress id="pr-internal-progress" max="1" value="0"></progress><p id="pr-internal-progress-label"></p><p id="pr-internal-progress-state"></p>
+            <form id="pr-internal-upload-form" class="pr-form"><div id="pr-internal-file-fields" class="pr-columns"></div><label>Date de réalisation<input id="pr-internal-performed-at" type="date"></label><label>Commentaire facultatif<textarea id="pr-internal-comment" rows="3" maxlength="1000"></textarea></label><label class="pr-confirm"><input id="pr-internal-confirm-order" type="checkbox" required> Je confirme que ces fichiers correspondent au patient, à l’examen et à la commande affichés.</label><button id="pr-internal-submit-result" class="pr-primary" disabled>Transmettre à la revue admin</button><p id="pr-internal-upload-status" class="pr-status" role="status"></p></form>
+          </article>
+        </article>
+
+        <article class="pr-panel" id="pr-admin-results-panel"><p class="pr-eyebrow">Contrôle administratif</p><h2>Résultats reçus</h2>
+          <div class="pr-filters">
+            <label>Recherche<input id="pr-filter-search" type="search" placeholder="Commande, patient, prestataire, examen"></label>
+            <label>Partenaire<select id="pr-filter-partner"><option value="">Tous les partenaires</option></select></label>
+            <label>Examen<select id="pr-filter-exam"><option value="">Tous les examens</option></select></label>
+            <label>Statut<select id="pr-filter-status"><option value="">Tous les statuts</option><option>RESULT_PENDING_REVIEW</option><option>CORRECTION_REQUESTED</option><option>VALIDATED</option><option>RESULT_AVAILABLE</option><option>NOT_PERFORMED</option></select></label>
+            <label>Type<select id="pr-filter-type"><option value="">Tous les examens</option><option value="laboratory">Laboratoire</option><option value="imaging">Imagerie</option></select></label>
+            <label>Paiement<select id="pr-filter-payment"><option value="">Tous les paiements</option><option value="ELIGIBLE">Éligible</option><option value="PENDING">Dans un relevé</option><option value="BLOCKED">Bloqué</option><option value="PAID">Payé</option></select></label>
+            <label>Du<input id="pr-filter-from" type="date"></label><label>Au<input id="pr-filter-to" type="date"></label>
+            <button id="pr-refresh-results" class="pr-quiet" type="button">Actualiser</button>
+            <button id="pr-export-results" class="pr-quiet" type="button">Exporter les résultats CSV</button>
+          </div>
+          <div id="pr-admin-results" class="pr-table-wrap"></div>
+        </article>
+
+        <article class="pr-panel" id="pr-settlements-panel"><p class="pr-eyebrow">Paiements prestataires</p><h2>Règlements</h2><div class="pr-actions"><button id="pr-create-settlement" class="pr-primary" type="button">Créer un relevé pour la sélection</button><button id="pr-export-settlements" class="pr-quiet" type="button">Exporter les paiements CSV</button></div><div id="pr-settlements-list" class="pr-list"></div></article>
+        <article class="pr-panel" id="pr-partner-report-panel"><p class="pr-eyebrow">Rapport par établissement</p><h2>Suivi individuel</h2><form id="pr-partner-report-form" class="pr-inline"><label>Partenaire<select id="pr-report-partner" required><option value="">Sélectionner un partenaire</option></select></label><button class="pr-primary">Afficher le rapport</button></form><div id="pr-partner-report"></div></article>
+        <article class="pr-panel" id="pr-audit-panel"><p class="pr-eyebrow">Traçabilité</p><h2>Historique et audit</h2><div id="pr-audit-list" class="pr-list"></div></article>
+
+        <article class="pr-panel" id="pr-requirements-panel"><p class="pr-eyebrow">Paramètres du portail</p><h2>Pièces obligatoires par examen</h2>
+          <form id="pr-requirements-form" class="pr-form pr-form-grid"><label>Service<select name="providerType" id="pr-req-type"><option value="laboratory">Laboratoire</option><option value="imaging">Imagerie</option></select></label><label>ID stable de l’examen<input name="examId" required></label><label>Nom de l’examen<input name="examName" required></label>
+            <fieldset class="pr-category-options"><legend>Éléments obligatoires</legend><label data-req-type="laboratory"><input type="checkbox" name="requiredCategories" value="LAB_RESULT"> Résultat de laboratoire</label><label data-req-type="imaging"><input type="checkbox" name="requiredCategories" value="IMAGING"> Images d’imagerie</label><label data-req-type="imaging"><input type="checkbox" name="requiredCategories" value="RADIOLOGY_REPORT"> Rapport radiologique</label><label><input type="checkbox" name="requiredCategories" value="SUPPLEMENTAL"> Document complémentaire</label></fieldset>
+            <label>Nombre maximal de fichiers<input name="maxFiles" type="number" min="1" max="20" value="10" required></label><label>Taille maximale par fichier (Mo)<input name="maxFileBytesMb" type="number" min="1" max="15" value="15" required></label><label><input name="allowSupplemental" type="checkbox"> Autoriser les documents complémentaires</label><label><input name="allowMultiplePerCategory" type="checkbox" checked> Autoriser plusieurs fichiers par catégorie</label><button class="pr-primary">Enregistrer les exigences</button><p id="pr-requirements-status" class="pr-status" role="status"></p>
+          </form><div id="pr-requirements-list" class="pr-list"></div>
+        </article>
+
+        <article class="pr-panel" id="pr-partners-panel"><p class="pr-eyebrow">Gestion des accès</p><h2 id="pr-partner-form-title">Créer un partenaire</h2>
+          <form id="pr-create-partner" class="pr-form pr-form-grid"><input name="uid" type="hidden"><label>Établissement<input name="name" required></label><label>Responsable<input name="responsibleName"></label><label>E-mail de contact<input name="email" type="email" required></label><label>Téléphone principal<input name="phone" required></label><label>Autres téléphones, séparés par virgule<input name="phones"></label><label>Adresse<input name="address" required></label><label>Pays<input name="country" value="Haïti"></label><label>Département<input name="department"></label><label>Commune<input name="commune"></label><label>NIF<input name="taxId"></label><label>Type<select name="providerType"><option value="laboratory">Laboratoire</option><option value="imaging">Imagerie</option><option value="mixed">Laboratoire et imagerie</option></select></label>
+            <fieldset class="pr-hours-grid"><legend>Horaires par jour</legend><label><input type="checkbox" name="day-monday"> Lundi <input type="time" name="open-monday"> à <input type="time" name="close-monday"></label><label><input type="checkbox" name="day-tuesday"> Mardi <input type="time" name="open-tuesday"> à <input type="time" name="close-tuesday"></label><label><input type="checkbox" name="day-wednesday"> Mercredi <input type="time" name="open-wednesday"> à <input type="time" name="close-wednesday"></label><label><input type="checkbox" name="day-thursday"> Jeudi <input type="time" name="open-thursday"> à <input type="time" name="close-thursday"></label><label><input type="checkbox" name="day-friday"> Vendredi <input type="time" name="open-friday"> à <input type="time" name="close-friday"></label><label><input type="checkbox" name="day-saturday"> Samedi <input type="time" name="open-saturday"> à <input type="time" name="close-saturday"></label><label><input type="checkbox" name="day-sunday"> Dimanche <input type="time" name="open-sunday"> à <input type="time" name="close-sunday"></label></fieldset>
+            <label>Informations utiles au patient<textarea name="additionalInformation"></textarea></label><label>Notes administratives<textarea name="administrativeNotes"></textarea></label><label>Documents contractuels / justificatifs<input name="contractDocuments" type="file" accept="application/pdf,image/jpeg,image/png" multiple><small>PDF, JPG ou PNG · 10 Mo maximum par fichier</small></label><button class="pr-primary">Créer / enregistrer le profil</button><button type="reset" class="pr-quiet">Réinitialiser le formulaire</button><p id="pr-create-status" class="pr-status" role="status"></p>
+          </form><div id="pr-created-credentials"></div>
+        </article>
+        <article class="pr-panel" id="pr-partners-list-panel"><p class="pr-eyebrow">Comptes partenaires</p><h2>Partenaires</h2><div id="pr-partners-list" class="pr-list"></div></article>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="pr-review-dialog" class="pr-dialog"><form method="dialog" id="pr-review-form"><button class="pr-dialog-close" value="cancel" aria-label="Fermer">×</button><p class="pr-eyebrow">Revue administrative</p><h2 id="pr-review-title">Résultat</h2><section id="pr-review-summary" class="pr-summary"></section><div id="pr-review-files"></div><section id="pr-result-history" class="pr-list" aria-label="Historique des versions"></section><label>Motif requis pour correction / non réalisé<textarea id="pr-review-reason" rows="3"></textarea></label><div class="pr-actions"><button type="button" data-review="REQUEST_CORRECTION" class="pr-quiet">Demander une correction</button><button type="button" data-review="NOT_PERFORMED" class="pr-quiet">Non réalisé</button><button type="button" data-review="VALIDATE" class="pr-primary">Valider · réalisé</button><button type="button" data-transfer class="pr-primary" hidden>Transférer au patient</button></div></form></dialog>
+  <script type="module" src="./health-partner-results.js?v=20260929-3"></script>
+</body>
+</html>

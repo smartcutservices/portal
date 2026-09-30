@@ -16,7 +16,7 @@ RUN if grep -q '^ConcurrentDatabaseReload ' /etc/clamav/clamd.conf; then \
 WORKDIR /app
 COPY --chown=clamav:clamav server.js ./server.js
 COPY --chown=clamav:clamav entrypoint.sh ./entrypoint.sh
-RUN chmod 0555 /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod 0555 /app/entrypoint.sh
 USER clamav
 EXPOSE 8080
 ENTRYPOINT ["/app/entrypoint.sh"]

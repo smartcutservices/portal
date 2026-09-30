@@ -8,3 +8,37 @@
 @media(max-width:1000px){.pr-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.pr-filters{grid-template-columns:1fr}.pr-filters #pr-filter-search{grid-column:auto}.pr-filters button{width:100%}.pr-profile{grid-template-columns:1fr}.pr-dialog{padding:18px}}
 .pr-upload-progress{display:grid;gap:8px;margin:0 0 18px;padding:12px 14px;border:1px solid var(--pr-line);border-radius:12px;background:#f7fbfa}.pr-upload-progress>div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px}.pr-upload-progress span{color:var(--pr-muted)}.pr-upload-progress progress{width:100%;height:10px;accent-color:var(--pr-green)}.pr-correction-reason{padding:12px;border-left:4px solid #cf8b22;border-radius:8px;background:#fff8e9;color:#684711}
+
+/* Dashboard shell: persistent module navigation and a focused content canvas. */
+#pr-app:not([hidden]){display:grid;grid-template-columns:258px minmax(0,1fr);min-height:calc(100vh - 74px);background:#f4f7f8}
+.pr-shell{max-width:none;padding:0;margin:0}
+.pr-topbar{height:74px;padding:0 28px}
+.pr-sidebar{position:sticky;top:74px;height:calc(100vh - 74px);display:flex;flex-direction:column;padding:26px 16px 18px;background:#102e3d;color:#eaf4f3}
+.pr-sidebar-heading{padding:4px 10px 24px;border-bottom:1px solid #ffffff20}
+.pr-sidebar-heading strong{display:block;font-size:17px;letter-spacing:-.02em}
+.pr-sidebar-heading small{display:block;margin-top:4px;color:#a8c0c5;font-size:12px}
+.pr-sidebar .pr-eyebrow{color:#70cbb4}
+.pr-nav{display:grid;align-content:start;gap:5px;margin:18px 0;overflow:auto}
+.pr-nav button{display:flex;align-items:center;gap:11px;min-height:43px;padding:10px 12px;border:1px solid transparent;border-radius:10px;background:transparent;color:#c4d6d9;text-align:left;font-size:13px;font-weight:650;transition:background .16s ease,color .16s ease,border-color .16s ease}
+.pr-nav button:hover{border-color:#ffffff18;background:#ffffff0b;color:#fff}
+.pr-nav button.active{border-color:#55bda64a;background:#087c6852;color:#fff;box-shadow:inset 3px 0 #6ce0c2}
+.pr-nav-marker{width:8px;height:8px;flex:0 0 8px;border:1.5px solid #82a5aa;border-radius:3px;transform:rotate(45deg)}
+.pr-nav button.active .pr-nav-marker{border-color:#78e2c5;background:#78e2c5}
+.pr-sidebar-foot{margin-top:auto;padding:14px 10px 0;border-top:1px solid #ffffff20;color:#a8c0c5;font-size:11px}
+.pr-secure-dot{display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:#57d6a9;box-shadow:0 0 0 3px #57d6a91f}
+.pr-workspace{min-width:0;padding:30px clamp(20px,3vw,46px) 56px}
+.pr-heading{min-height:74px;margin:0 0 24px;padding:0 0 20px;border-bottom:1px solid #dce6e8}
+.pr-heading h1{font-size:clamp(26px,2.5vw,34px);letter-spacing:-.035em}
+.pr-heading .pr-eyebrow{color:#087c68}
+.pr-heading p:last-child{font-size:13px}
+.pr-header-actions{display:flex;align-items:center;gap:14px}
+.pr-user{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr-module[hidden]{display:none!important}
+.pr-view{min-width:0}
+.pr-view>article.pr-module{margin:0;animation:pr-enter .22s ease both}
+.pr-panel{border-radius:16px;padding:clamp(18px,2.2vw,28px);box-shadow:0 8px 26px #183b360a}
+.pr-panel h2{letter-spacing:-.02em}
+.pr-notice{position:sticky;top:82px;z-index:2;box-shadow:0 5px 20px #183b3614}
+@keyframes pr-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:850px){#pr-app:not([hidden]){grid-template-columns:1fr;min-height:calc(100vh - 62px)}.pr-topbar{height:62px;padding:0 16px}.pr-sidebar{position:sticky;top:62px;z-index:3;height:auto;padding:10px 12px;background:#102e3d}.pr-sidebar-heading,.pr-sidebar-foot{display:none}.pr-nav{display:flex;gap:6px;margin:0;overflow-x:auto;scrollbar-width:thin}.pr-nav button{flex:0 0 auto;min-height:40px;padding:8px 11px;white-space:nowrap}.pr-workspace{padding:20px 16px 40px}.pr-heading{margin-bottom:16px;padding-bottom:14px}.pr-heading h1{font-size:25px}.pr-notice{top:112px}}
+@media(max-width:520px){.pr-topbar{padding:0 12px}.pr-brand>span{width:36px;height:36px}.pr-brand strong{font-size:13px}.pr-brand small{font-size:10px}.pr-workspace{padding:16px 12px 32px}.pr-heading{align-items:flex-start}.pr-heading h1{font-size:22px}.pr-header-actions{align-items:flex-end;flex-direction:column-reverse;gap:8px}.pr-header-actions .pr-quiet{padding:7px 10px;font-size:12px}.pr-user{max-width:140px;font-size:11px}.pr-nav button{font-size:12px}}

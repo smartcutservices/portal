@@ -46,15 +46,34 @@ function setMode(mode) {
   byId('pr-login').hidden = true; byId('pr-app').hidden = false;
   byId('pr-user').hidden = false; byId('pr-user').textContent = state.user?.email || state.user?.uid || '';
   byId('pr-partner-view').hidden = mode !== 'partner'; byId('pr-admin-view').hidden = mode !== 'admin';
-  byId('pr-title').textContent = mode === 'admin' ? 'Administration des résultats' : 'Espace partenaire';
-  const adminSections = [['Vue d’ensemble', 'pr-admin-metrics'], ['Alertes & anomalies', 'pr-admin-alerts-panel'], ['Résultats reçus', 'pr-admin-results-panel'], ['Examens internes', 'pr-internal-lookup-form'], ['Partenaires', 'pr-partners-list'], ['Paiements prestataires', 'pr-settlements-list'], ['Historique & audit', 'pr-audit-list'], ['Paramètres des fichiers', 'pr-requirements-form']];
-  const partnerSections = [['Commandes à traiter', 'pr-lookup-form'], ['Résultats déposés', 'pr-own-results'], ['Corrections demandées', 'pr-corrections-panel'], ['Historique', 'pr-partner-audit-panel'], ['Profil / sécurité', 'pr-partner-profile-panel']];
-  const sections = mode === 'admin' ? adminSections : partnerSections;
-  byId('pr-nav').innerHTML = sections.map(([label, target], index) => `<button type="button" class="${index === 0 ? 'active' : ''}" data-target="${target}">${label}</button>`).join('');
-  $$('#pr-nav button').forEach((button) => button.addEventListener('click', () => {
-    $$('#pr-nav button').forEach((item) => item.classList.toggle('active', item === button));
-    byId(button.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }));
+  const modules = mode === 'admin' ? [
+    ['Vue d’ensemble', 'admin-overview', 'pr-overview-panel'], ['Alertes & anomalies', 'admin-alerts', 'pr-admin-alerts-panel'],
+    ['Résultats reçus', 'admin-results', 'pr-admin-results-panel'], ['Examens internes', 'admin-internal', 'pr-internal-panel'],
+    ['Partenaires', 'admin-partners', 'pr-partners-panel,pr-partners-list-panel'], ['Règlements', 'admin-settlements', 'pr-settlements-panel'],
+    ['Rapports', 'admin-reports', 'pr-partner-report-panel'], ['Historique & audit', 'admin-audit', 'pr-audit-panel'],
+    ['Paramètres', 'admin-settings', 'pr-requirements-panel']
+  ] : [
+    ['Vue d’ensemble', 'partner-overview', 'pr-partner-metrics-panel'], ['Commandes à traiter', 'partner-orders', 'pr-lookup-panel,pr-upload-card,pr-partner-orders-panel'],
+    ['Résultats déposés', 'partner-results', 'pr-own-results-panel'], ['Corrections demandées', 'partner-corrections', 'pr-corrections-panel'],
+    ['Mon établissement', 'partner-profile', 'pr-partner-profile-panel'], ['Historique', 'partner-audit', 'pr-partner-audit-panel'],
+    ['Sécurité', 'partner-security', 'pr-partner-security-panel']
+  ];
+  const allModules = $$('.pr-view > article').filter((panel) => panel.id !== 'pr-upload-card');
+  allModules.forEach((panel) => { panel.classList.add('pr-module'); panel.hidden = true; });
+  modules.forEach(([, module, ids]) => ids.split(',').forEach((id) => { const panel = byId(id); if (panel) panel.dataset.module = module; }));
+  byId('pr-title').textContent = mode === 'admin' ? 'Vue d’ensemble' : 'Vue d’ensemble';
+  byId('pr-page-context').textContent = mode === 'admin' ? 'Administration · Résultats partenaires' : 'Espace partenaire · Résultats médicaux';
+  byId('pr-nav').innerHTML = modules.map(([label, module], index) => `<button type="button" class="${index === 0 ? 'active' : ''}" data-module-target="${module}" aria-current="${index === 0 ? 'page' : 'false'}"><span class="pr-nav-marker"></span>${label}</button>`).join('');
+  const activate = (module) => {
+    allModules.forEach((panel) => { panel.hidden = panel.dataset.module !== module; });
+    if (module !== 'partner-orders') byId('pr-upload-card').hidden = true;
+    $$('#pr-nav button').forEach((button) => { const active = button.dataset.moduleTarget === module; button.classList.toggle('active', active); button.setAttribute('aria-current', active ? 'page' : 'false'); });
+    const selected = modules.find((item) => item[1] === module);
+    byId('pr-title').textContent = selected?.[0] || 'Portail';
+    byId('pr-workspace').dataset.activeModule = module;
+  };
+  $$('#pr-nav button').forEach((button) => button.addEventListener('click', () => activate(button.dataset.moduleTarget)));
+  activate(modules[0][1]);
 }
 async function initUser(user) {
   state.user = user;

@@ -1,9 +1,8 @@
 FROM clamav/clamav:1.4
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends nodejs ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
+USER root
+RUN apk add --no-cache nodejs ca-certificates \
     && mkdir -p /app /run/clamav \
     && chown clamav:clamav /app /run/clamav
 

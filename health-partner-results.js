@@ -63,7 +63,27 @@ function setMode(mode) {
   modules.forEach(([, module, ids]) => ids.split(',').forEach((id) => { const panel = byId(id); if (panel) panel.dataset.module = module; }));
   byId('pr-title').textContent = mode === 'admin' ? 'Vue d’ensemble' : 'Vue d’ensemble';
   byId('pr-page-context').textContent = mode === 'admin' ? 'Administration · Résultats partenaires' : 'Espace partenaire · Résultats médicaux';
-  byId('pr-nav').innerHTML = modules.map(([label, module], index) => `<button type="button" class="${index === 0 ? 'active' : ''}" data-module-target="${module}" aria-current="${index === 0 ? 'page' : 'false'}"><span class="pr-nav-marker"></span>${label}</button>`).join('');
+  byId('pr-nav').innerHTML = `<div class="pr-nav-header"><strong>Navigation</strong><button type="button" class="pr-nav-close" aria-label="Fermer le menu">×</button></div>${modules.map(([label, module], index) => `<button type="button" class="${index === 0 ? 'active' : ''}" data-module-target="${module}" aria-current="${index === 0 ? 'page' : 'false'}"><span class="pr-nav-marker"></span>${label}</button>`).join('')}`;
+  const nav = byId('pr-nav');
+  const menuToggle = byId('pr-menu-toggle');
+  const backdrop = byId('pr-nav-backdrop');
+  const closeMenu = () => {
+    nav.classList.remove('open');
+    backdrop.classList.remove('visible');
+    menuToggle.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('pr-menu-open');
+  };
+  menuToggle.onclick = () => {
+    const open = !nav.classList.contains('open');
+    nav.classList.toggle('open', open);
+    backdrop.classList.toggle('visible', open);
+    menuToggle.setAttribute('aria-expanded', String(open));
+    document.body.classList.toggle('pr-menu-open', open);
+    if (open) nav.querySelector('.pr-nav-close')?.focus();
+  };
+  backdrop.onclick = closeMenu;
+  nav.querySelector('.pr-nav-close').onclick = closeMenu;
+  document.onkeydown = (event) => { if (event.key === 'Escape') closeMenu(); };
   const activate = (module) => {
     allModules.forEach((panel) => { panel.hidden = panel.dataset.module !== module; });
     if (module !== 'partner-orders') byId('pr-upload-card').hidden = true;
@@ -72,7 +92,7 @@ function setMode(mode) {
     byId('pr-title').textContent = selected?.[0] || 'Portail';
     byId('pr-workspace').dataset.activeModule = module;
   };
-  $$('#pr-nav button').forEach((button) => button.addEventListener('click', () => activate(button.dataset.moduleTarget)));
+  $$('#pr-nav button[data-module-target]').forEach((button) => button.addEventListener('click', () => { activate(button.dataset.moduleTarget); closeMenu(); }));
   activate(modules[0][1]);
 }
 async function initUser(user) {

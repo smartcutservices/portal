@@ -65,17 +65,18 @@ function setMode(mode) {
   byId('pr-page-context').textContent = mode === 'admin' ? 'Administration · Résultats partenaires' : 'Espace partenaire · Résultats médicaux';
   byId('pr-nav').innerHTML = `<div class="pr-nav-header"><strong>Navigation</strong><button type="button" class="pr-nav-close" aria-label="Fermer le menu">×</button></div>${modules.map(([label, module], index) => `<button type="button" class="${index === 0 ? 'active' : ''}" data-module-target="${module}" aria-current="${index === 0 ? 'page' : 'false'}"><span class="pr-nav-marker"></span>${label}</button>`).join('')}`;
   const nav = byId('pr-nav');
+  const sidebar = $('.pr-sidebar');
   const menuToggle = byId('pr-menu-toggle');
   const backdrop = byId('pr-nav-backdrop');
   const closeMenu = () => {
-    nav.classList.remove('open');
+    sidebar.classList.remove('open');
     backdrop.classList.remove('visible');
     menuToggle.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('pr-menu-open');
   };
   menuToggle.onclick = () => {
-    const open = !nav.classList.contains('open');
-    nav.classList.toggle('open', open);
+    const open = !sidebar.classList.contains('open');
+    sidebar.classList.toggle('open', open);
     backdrop.classList.toggle('visible', open);
     menuToggle.setAttribute('aria-expanded', String(open));
     document.body.classList.toggle('pr-menu-open', open);

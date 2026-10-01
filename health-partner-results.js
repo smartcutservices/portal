@@ -5,6 +5,13 @@ import { ref as storageRef, uploadBytes } from 'https://www.gstatic.com/firebase
 const PROJECT_ID = 'smartcutservices-9ce54';
 const REGION = 'us-central1';
 const API = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/`;
+const embeddedAdminRequested = new URLSearchParams(window.location.search).get('embedded') === 'admin';
+const embeddedAdminContext = embeddedAdminRequested && window.parent !== window;
+if (embeddedAdminContext) {
+  const embeddedStyles = document.createElement('style');
+  embeddedStyles.textContent = 'html,body{min-height:100%;height:100%;overflow:auto}.pr-topbar{display:none}.pr-shell{max-width:none;margin:0;padding:18px 22px 32px}.pr-heading{position:sticky;top:0;z-index:3;padding:12px 0;background:#edf4f4}.pr-nav{position:sticky;top:74px;z-index:2;padding:8px 0;background:#edf4f4}.pr-nav-backdrop{z-index:20}@media(max-width:800px){.pr-shell{padding:12px}.pr-heading{top:0;padding:8px 0}.pr-nav{top:60px}}';
+  document.head.append(embeddedStyles);
+}
 const byId = (id) => document.getElementById(id);
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -100,17 +107,43 @@ async function initUser(user) {
   state.user = user;
   if (!user) { state.loginAuditRecorded = false; byId('pr-login').hidden = false; byId('pr-app').hidden = true; byId('pr-password-change').hidden = true; byId('pr-user').hidden = true; return; }
   const token = await getIdTokenResult(user, true); state.token = token;
-  if (!state.loginAuditRecorded) {
-    try { await call('healthPartnerRecordPortalLogin', { method: 'POST', body: {} }); state.loginAuditRecorded = true; }
-    catch (error) { showNotice(`Connexion active, mais l’audit de connexion n’a pas pu être enregistré : ${error.message}`, 'error'); }
-  }
   if (token.claims.healthPartnerMustChangePassword) { byId('pr-login').hidden = true; byId('pr-app').hidden = true; byId('pr-password-change').hidden = false; return; }
   const partnerLogin = String(user.email || '').endsWith('@partners.smartcuthealth.invalid') || token.claims.healthPartner === true;
   state.role = token.claims.role || token.claims.platformRole || '';
-  setMode(partnerLogin ? 'partner' : 'admin');
-  byId('pr-identity').textContent = partnerLogin ? `Compte partenaire · ${token.claims.healthPartnerId || user.uid}` : 'Smart Cut Health · Administration';
-  if (partnerLogin) { await Promise.all([loadPartnerOrders(), loadPartnerResults(), loadPartnerCorrections(), loadPartnerAudit(), loadPartnerOverview()]); }
-  else { await Promise.all([loadAdminOverview(), loadAdminResults(), loadAdminPartners(), loadAdminRequirements(), loadAdminSettlements(), loadAdminAudit(), loadAdminAlerts()]); }
+  if (partnerLogin) {
+    if (!state.loginAuditRecorded) {
+      try { await call('healthPartnerRecordPortalLogin', { method: 'POST', body: {} }); state.loginAuditRecorded = true; }
+      catch (error) { showNotice(`Connexion active, mais l’audit de connexion n’a pas pu être enregistré : ${error.message}`, 'error'); }
+    }
+    setMode('partner');
+    byId('pr-identity').textContent = `Compte partenaire · ${token.claims.healthPartnerId || user.uid}`;
+    await Promise.all([loadPartnerOrders(), loadPartnerResults(), loadPartnerCorrections(), loadPartnerAudit(), loadPartnerOverview()]);
+    return;
+  }
+
+  if (!embeddedAdminContext) {
+    byId('pr-login').hidden = false; byId('pr-app').hidden = true; byId('pr-password-change').hidden = true;
+    byId('pr-login-form').hidden = true;
+    const status = byId('pr-login-status');
+    status.textContent = 'L’administration des résultats est uniquement accessible depuis le dashboard admin Smart Cut Health. ';
+    const dashboardLink = document.createElement('a');
+    dashboardLink.href = 'https://smartcutservices.github.io/dashboard-/health-admin.html?module=partners';
+    dashboardLink.textContent = 'Ouvrir le dashboard admin';
+    status.append(dashboardLink);
+    return;
+  }
+
+  try {
+    await call('healthAdminGetPartnerResultsOverview');
+  } catch (error) {
+    byId('pr-login').hidden = false; byId('pr-app').hidden = true;
+    byId('pr-login-form').hidden = true;
+    showStatus('pr-login-status', `Accès Partenaires réservé aux administrateurs autorisés : ${error.message}`, 'error');
+    return;
+  }
+  setMode('admin');
+  byId('pr-identity').textContent = 'Smart Cut Health · Administration';
+  await Promise.all([loadAdminOverview(), loadAdminResults(), loadAdminPartners(), loadAdminRequirements(), loadAdminSettlements(), loadAdminAudit(), loadAdminAlerts()]);
 }
 async function loadAdminOverview() {
   try {

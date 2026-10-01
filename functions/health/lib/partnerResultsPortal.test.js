@@ -32,3 +32,11 @@ test('partner results page includes both workflows and administrative controls',
     'pr-result-history', 'pr-security-form'
   ]) assert.ok(html.includes(`id="${id}"`), `missing portal section ${id}`);
 });
+
+test('administration is limited to the embedded dashboard and portal sign-in is partner-only', () => {
+  assert.match(html, /Identifiant partenaire ou e-mail du compte partenaire/);
+  assert.doesNotMatch(html, /e-mail administrateur/i);
+  assert.match(script, /embeddedAdminRequested[\s\S]*window\.parent !== window/);
+  assert.match(script, /if \(!embeddedAdminContext\)[\s\S]*dashboard admin Smart Cut Health/);
+  assert.match(script, /await call\('healthAdminGetPartnerResultsOverview'\)[\s\S]*setMode\('admin'\)/);
+});

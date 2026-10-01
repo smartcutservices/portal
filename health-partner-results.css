@@ -59,3 +59,46 @@
   .pr-nav button[data-module-target]{width:100%;min-height:47px;padding:11px 12px}
   body.pr-menu-open{overflow:hidden}
 }
+
+/* Full-viewport admin embedding; keep only essential controls from the standalone portal. */
+body.pr-embedded-admin,
+body.pr-embedded-admin .pr-shell{width:100%;height:100dvh;min-height:0;margin:0;overflow:hidden}
+body.pr-embedded-admin{background:#f4f7f8}
+body.pr-embedded-admin .pr-topbar{display:none!important}
+body.pr-embedded-admin .pr-shell{max-width:none;padding:0!important}
+body.pr-embedded-admin #pr-app:not([hidden]){height:100dvh;min-height:0!important;grid-template-columns:250px minmax(0,1fr);overflow:hidden}
+body.pr-embedded-admin #pr-app .pr-sidebar{position:relative;inset:auto;width:auto;height:100dvh;min-height:0;padding:22px 15px 16px;overflow-y:auto;transform:none;visibility:visible;background:#102e3d!important;color:#f4fbfa!important;box-shadow:none}
+body.pr-embedded-admin #pr-app .pr-sidebar-heading{padding:4px 10px 18px}
+body.pr-embedded-admin #pr-app .pr-sidebar-heading .pr-eyebrow{color:#70e0bd!important}
+body.pr-embedded-admin #pr-app .pr-sidebar-heading strong{color:#fff!important}
+body.pr-embedded-admin #pr-app .pr-sidebar-heading small,
+body.pr-embedded-admin #pr-app .pr-sidebar-foot{color:#d1e2e5!important}
+body.pr-embedded-admin #pr-app .pr-nav{position:static;display:grid;align-content:start;gap:5px;margin:14px 0;padding:0;overflow:auto;background:transparent!important}
+body.pr-embedded-admin #pr-app .pr-nav button{min-height:43px;color:#e2eff0!important;background:transparent!important;border-color:transparent!important}
+body.pr-embedded-admin #pr-app .pr-nav button:hover{background:#ffffff14!important;color:#fff!important}
+body.pr-embedded-admin #pr-app .pr-nav button.active{background:#087c68!important;border-color:#55d2b2!important;color:#fff!important;box-shadow:inset 3px 0 #83f0ce!important}
+body.pr-embedded-admin #pr-app .pr-nav-marker{border-color:#a9c4c7!important}
+body.pr-embedded-admin #pr-app .pr-nav button.active .pr-nav-marker{border-color:#9cf4d9!important;background:#9cf4d9!important}
+body.pr-embedded-admin #pr-app .pr-workspace{height:100dvh;min-height:0;overflow:auto;padding:14px 24px 28px;scrollbar-gutter:stable}
+body.pr-embedded-admin #pr-app .pr-heading{position:relative;top:auto;min-height:0;margin:0 0 12px;padding:0 0 10px;background:transparent}
+body.pr-embedded-admin #pr-app .pr-heading>div:first-child,
+body.pr-embedded-admin #pr-app .pr-header-actions #pr-user{display:none!important}
+body.pr-embedded-admin #pr-app .pr-header-actions{justify-content:flex-end;width:100%}
+body.pr-embedded-admin #pr-app .pr-header-actions .pr-quiet{padding:7px 11px;font-size:12px}
+body.pr-embedded-admin #pr-app .pr-nav-backdrop{z-index:20}
+@media(max-width:850px){
+  body.pr-embedded-admin #pr-app:not([hidden]){height:100dvh;grid-template-columns:1fr}
+  body.pr-embedded-admin #pr-app .pr-sidebar{position:fixed;inset:0 0 0 auto;width:min(360px,88vw);height:100dvh;padding:20px 16px 18px;transform:translateX(105%);visibility:hidden;z-index:21;box-shadow:-18px 0 48px #061e2b55}
+  body.pr-embedded-admin #pr-app .pr-sidebar.open{transform:translateX(0);visibility:visible}
+  body.pr-embedded-admin #pr-app .pr-sidebar-heading,
+  body.pr-embedded-admin #pr-app .pr-sidebar-foot{display:block}
+  body.pr-embedded-admin #pr-app .pr-nav{align-content:start;gap:7px;margin:15px 0;overflow:visible}
+  body.pr-embedded-admin #pr-app .pr-nav-header{display:flex;align-items:center;justify-content:space-between;padding:3px 8px 14px;margin-bottom:5px;border-bottom:1px solid #ffffff2a;color:#fff;font-size:17px}
+  body.pr-embedded-admin #pr-app .pr-nav button[data-module-target]{width:100%;min-height:47px;padding:11px 12px}
+  body.pr-embedded-admin #pr-app .pr-workspace{height:100dvh;padding:12px 14px 24px}
+  body.pr-embedded-admin #pr-app .pr-heading{padding-bottom:8px}
+  body.pr-embedded-admin #pr-app .pr-menu-toggle{display:grid;place-items:center;width:42px;height:42px;border:1px solid #cbdcd8;border-radius:12px;background:#fff;color:#123746;font-size:21px;cursor:pointer}
+  body.pr-embedded-admin #pr-app .pr-nav-backdrop{display:block;position:fixed;inset:0;z-index:20;border:0;background:#061e2bd1;opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease}
+  body.pr-embedded-admin #pr-app .pr-nav-backdrop.visible{opacity:1;visibility:visible}
+  body.pr-embedded-admin.pr-menu-open{overflow:hidden}
+}

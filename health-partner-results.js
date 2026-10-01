@@ -8,9 +8,7 @@ const API = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/`;
 const embeddedAdminRequested = new URLSearchParams(window.location.search).get('embedded') === 'admin';
 const embeddedAdminContext = embeddedAdminRequested && window.parent !== window;
 if (embeddedAdminContext) {
-  const embeddedStyles = document.createElement('style');
-  embeddedStyles.textContent = 'html,body{min-height:100%;height:100%;overflow:auto}.pr-topbar{display:none}.pr-shell{max-width:none;margin:0;padding:18px 22px 32px}.pr-heading{position:sticky;top:0;z-index:3;padding:12px 0;background:#edf4f4}.pr-nav{position:sticky;top:74px;z-index:2;padding:8px 0;background:#edf4f4}.pr-nav-backdrop{z-index:20}@media(max-width:800px){.pr-shell{padding:12px}.pr-heading{top:0;padding:8px 0}.pr-nav{top:60px}}';
-  document.head.append(embeddedStyles);
+  document.body.classList.add('pr-embedded-admin');
 }
 const byId = (id) => document.getElementById(id);
 const $ = (selector, root = document) => root.querySelector(selector);

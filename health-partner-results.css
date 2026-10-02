@@ -234,7 +234,7 @@ body.pr-embedded-admin .pr-metric small{display:block;margin-top:3px;color:#7d89
 .pr-partner-form .pr-upload-zone{position:relative}.pr-partner-form .pr-upload-zone input{position:absolute!important;inset:0;width:100%!important;height:100%!important;opacity:0;cursor:pointer}
 
 /* Partner directory view, aligned to the supplied administration reference. */
-body.pr-embedded-admin .pr-topbar{inset:0!important;height:56px!important;padding:0 30px!important;gap:28px!important}
+body.pr-embedded-admin .pr-topbar{display:flex!important;inset:0!important;height:56px!important;padding:0 30px!important;gap:28px!important}
 body.pr-embedded-admin .pr-brand{display:flex!important;flex:0 0 215px!important;gap:10px}
 body.pr-embedded-admin .pr-brand>span{width:34px;height:34px;border-radius:10px;background:transparent;color:#1268dc;font-size:22px}
 body.pr-embedded-admin .pr-brand strong{font-size:15px}

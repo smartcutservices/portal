@@ -71,6 +71,7 @@ test('partner directory matches the reference layout and only renders live API p
   assert.match(script, /data-partner-action="report"/);
   assert.match(css, /\.pr-partner-summary\{display:grid;grid-template-columns:repeat\(4/);
   assert.match(css, /\.pr-partner-table\{width:100%;min-width:/);
+  assert.match(css, /body\.pr-embedded-admin \.pr-topbar\{display:flex!important;inset:0!important/);
   assert.match(html, /data-parent-health-module="partners"/);
 });
 

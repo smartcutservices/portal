@@ -56,7 +56,8 @@ test('partner creation reproduces the full two-column reference form and require
   assert.match(api, /disabled: initialStatus !== 'active'/);
   assert.match(api, /active: status === 'active'/);
   assert.match(api, /const services = selectedServices \|\|/);
-  assert.match(api, /statusReason: statusReason \|\| null/);
+  assert.match(api, /requestedStatus !== previousStatus && statusReason\.length < 5/);
+  assert.match(api, /statusReason: statusChanged \? statusReason \|\| null : current\.partnerProfile\?\.statusReason/);
 });
 
 test('administration is limited to the embedded dashboard and portal sign-in is partner-only', () => {

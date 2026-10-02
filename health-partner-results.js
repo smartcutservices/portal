@@ -13,7 +13,7 @@ if (embeddedAdminContext) {
 const byId = (id) => document.getElementById(id);
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const state = { user: null, token: null, mode: null, lookup: null, results: [], corrections: [], orders: [], partners: [], settlements: [], partnerAudit: [], adminAudit: [], activeResult: null, loginAuditRecorded: false, partnerAuditCursor: null, partnerAuditHasMore: false, adminAuditCursor: null, adminAuditHasMore: false, fileUrls: [], fileAddedAt: new WeakMap(), fileSelections: new WeakMap(), adminCursor: null, adminHasMore: false, partnerOrderCursor: null, partnerOrderHasMore: false, partnerResultCursor: null, partnerResultHasMore: false, correctionCursor: null, correctionsHasMore: false, settlementCursor: null, settlementsHasMore: false };
+const state = { user: null, token: null, mode: null, lookup: null, results: [], corrections: [], orders: [], partners: [], settlements: [], partnerAudit: [], adminAudit: [], activeResult: null, overview: null, loginAuditRecorded: false, partnerAuditCursor: null, partnerAuditHasMore: false, adminCursor: null, adminHasMore: false, partnerOrderCursor: null, partnerOrderHasMore: false, partnerResultCursor: null, partnerResultHasMore: false, correctionCursor: null, correctionsHasMore: false, settlementCursor: null, settlementsHasMore: false };
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 const legacyContractsField = document.querySelector('#pr-create-partner [name="contractPaths"]')?.closest('label');
@@ -52,11 +52,14 @@ function setMode(mode) {
   byId('pr-user').hidden = false; byId('pr-user').textContent = state.user?.email || state.user?.uid || '';
   byId('pr-partner-view').hidden = mode !== 'partner'; byId('pr-admin-view').hidden = mode !== 'admin';
   const modules = mode === 'admin' ? [
-    ['Vue d’ensemble', 'admin-overview', 'pr-overview-panel'], ['Alertes & anomalies', 'admin-alerts', 'pr-admin-alerts-panel'],
-    ['Résultats reçus', 'admin-results', 'pr-admin-results-panel'], ['Examens internes', 'admin-internal', 'pr-internal-panel'],
-    ['Partenaires', 'admin-partners', 'pr-partners-panel,pr-partners-list-panel'], ['Règlements', 'admin-settlements', 'pr-settlements-panel'],
-    ['Rapports', 'admin-reports', 'pr-partner-report-panel'], ['Historique & audit', 'admin-audit', 'pr-audit-panel'],
-    ['Paramètres', 'admin-settings', 'pr-requirements-panel']
+    ['Vue d’ensemble', 'admin-overview', 'pr-overview-panel'],
+    ['Partenaires', 'admin-partners', 'pr-partners-list-panel'], ['Créer un partenaire', 'admin-create-partner', 'pr-partners-panel'],
+    ['Commandes affectées', 'admin-orders', 'pr-assigned-orders-panel'], ['Résultats reçus', 'admin-results', 'pr-admin-results-panel'],
+    ['À contrôler', 'admin-review', 'pr-admin-results-panel'], ['Corrections demandées', 'admin-corrections', 'pr-admin-results-panel'],
+    ['Examens réalisés / validés', 'admin-validated', 'pr-admin-results-panel'], ['Examens sans résultat', 'admin-no-result', 'pr-no-result-panel'],
+    ['Examens internes', 'admin-internal', 'pr-internal-panel'], ['Paiements prestataires', 'admin-settlements', 'pr-settlements-panel'],
+    ['Litiges / anomalies', 'admin-alerts', 'pr-admin-alerts-panel'], ['Rapports', 'admin-reports', 'pr-partner-report-panel'],
+    ['Historique & Audit', 'admin-audit', 'pr-audit-panel'], ['Paramètres du portail', 'admin-settings', 'pr-requirements-panel']
   ] : [
     ['Vue d’ensemble', 'partner-overview', 'pr-partner-metrics-panel'], ['Commandes à traiter', 'partner-orders', 'pr-lookup-panel,pr-upload-card,pr-partner-orders-panel'],
     ['Résultats déposés', 'partner-results', 'pr-own-results-panel'], ['Corrections demandées', 'partner-corrections', 'pr-corrections-panel'],
@@ -65,7 +68,7 @@ function setMode(mode) {
   ];
   const allModules = $$('.pr-view > article').filter((panel) => panel.id !== 'pr-upload-card');
   allModules.forEach((panel) => { panel.classList.add('pr-module'); panel.hidden = true; });
-  modules.forEach(([, module, ids]) => ids.split(',').forEach((id) => { const panel = byId(id); if (panel) panel.dataset.module = module; }));
+  modules.forEach(([, module, ids]) => ids.split(',').forEach((id) => { const panel = byId(id); if (!panel) return; const current = (panel.dataset.modules || panel.dataset.module || '').split(/\s+/).filter(Boolean); if (!current.includes(module)) current.push(module); panel.dataset.modules = current.join(' '); }));
   byId('pr-title').textContent = mode === 'admin' ? 'Vue d’ensemble' : 'Vue d’ensemble';
   byId('pr-page-context').textContent = mode === 'admin' ? 'Administration · Résultats partenaires' : 'Espace partenaire · Résultats médicaux';
   byId('pr-nav').innerHTML = `<div class="pr-nav-header"><strong>Navigation</strong><button type="button" class="pr-nav-close" aria-label="Fermer le menu">×</button></div>${modules.map(([label, module], index) => `<button type="button" class="${index === 0 ? 'active' : ''}" data-module-target="${module}" aria-current="${index === 0 ? 'page' : 'false'}"><span class="pr-nav-marker"></span>${label}</button>`).join('')}`;
@@ -91,15 +94,49 @@ function setMode(mode) {
   nav.querySelector('.pr-nav-close').onclick = closeMenu;
   document.onkeydown = (event) => { if (event.key === 'Escape') closeMenu(); };
   const activate = (module) => {
-    allModules.forEach((panel) => { panel.hidden = panel.dataset.module !== module; });
+    allModules.forEach((panel) => { panel.hidden = !(panel.dataset.modules || panel.dataset.module || '').split(/\s+/).includes(module); });
     if (module !== 'partner-orders') byId('pr-upload-card').hidden = true;
     $$('#pr-nav button').forEach((button) => { const active = button.dataset.moduleTarget === module; button.classList.toggle('active', active); button.setAttribute('aria-current', active ? 'page' : 'false'); });
     const selected = modules.find((item) => item[1] === module);
     byId('pr-title').textContent = selected?.[0] || 'Portail';
     byId('pr-workspace').dataset.activeModule = module;
+    if (mode === 'admin') {
+      const moduleStatus = { 'admin-review': 'RESULT_PENDING_REVIEW', 'admin-corrections': 'CORRECTION_REQUESTED', 'admin-validated': 'VALIDATED' }[module] || '';
+      if (byId('pr-filter-status')) byId('pr-filter-status').value = moduleStatus;
+      if (module === 'admin-results' || module === 'admin-review' || module === 'admin-corrections' || module === 'admin-validated') loadAdminResults().catch((error) => showNotice(error.message, 'error'));
+      if (module === 'admin-no-result') renderNoResultOrders();
+      if (module === 'admin-orders') renderAssignedOrders();
+    }
   };
   $$('#pr-nav button[data-module-target]').forEach((button) => button.addEventListener('click', () => { activate(button.dataset.moduleTarget); closeMenu(); }));
   activate(modules[0][1]);
+  const moduleSwitcher = byId('pr-module-switcher');
+  const moduleDialog = byId('pr-module-dialog');
+  if (moduleSwitcher) moduleSwitcher.hidden = !(mode === 'admin' && embeddedAdminContext);
+  const notificationButton = byId('pr-notifications-button');
+  if (notificationButton) notificationButton.hidden = !(mode === 'admin' && embeddedAdminContext);
+  const adminLogout = byId('pr-admin-logout');
+  if (adminLogout) adminLogout.hidden = !(mode === 'admin' && embeddedAdminContext);
+  if (mode === 'admin' && embeddedAdminContext) {
+    moduleSwitcher?.addEventListener('click', () => moduleDialog?.showModal());
+    adminLogout?.addEventListener('click', () => signOut(auth));
+    notificationButton?.addEventListener('click', () => { moduleDialog?.close(); nav.querySelector('[data-module-target="admin-alerts"]')?.click(); });
+    moduleDialog?.querySelectorAll('[data-parent-health-module]').forEach((button) => button.addEventListener('click', () => {
+      const module = button.dataset.parentHealthModule;
+      if (!['pharmacy', 'laboratory', 'imaging', 'medical'].includes(module)) return;
+      const parentOrigin = new URLSearchParams(location.search).get('parentOrigin');
+      if (embeddedAdminContext && parentOrigin && window.parent !== window) window.parent.postMessage({ type: 'smartcut-health-module-switch', module }, parentOrigin);
+      moduleDialog.close();
+    }));
+    byId('pr-global-search')?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const input = byId('pr-filter-search');
+      if (input) input.value = event.currentTarget.value.trim();
+      nav.querySelector('[data-module-target="admin-results"]')?.click();
+    });
+    $$('[data-open-module]').forEach((button) => button.addEventListener('click', () => nav.querySelector(`[data-module-target="${button.dataset.openModule}"]`)?.click()));
+  }
 }
 async function initUser(user) {
   state.user = user;
@@ -143,17 +180,94 @@ async function initUser(user) {
   byId('pr-identity').textContent = 'Smart Cut Health · Administration';
   await Promise.all([loadAdminOverview(), loadAdminResults(), loadAdminPartners(), loadAdminRequirements(), loadAdminSettlements(), loadAdminAudit(), loadAdminAlerts()]);
 }
-async function loadAdminOverview() {
+async function loadAdminOverview(days = Number(byId('pr-overview-range')?.value) || 30) {
   try {
-    const response = await call('healthAdminGetPartnerResultsOverview'); const data = response.overview || {};
-    const metrics = [
-      ['Partenaires actifs', data.activePartners], ['Laboratoires actifs', data.activeLaboratories], ['Centres d’imagerie actifs', data.activeImagingCenters],
-      ['Commandes affectées aujourd’hui', data.assignedToday], ['Commandes sans résultat aujourd’hui', data.ordersAwaitingResultToday], ['Résultats reçus aujourd’hui', data.resultsReceivedToday], ['Résultats à contrôler', data.awaitingReview],
-      ['Corrections en attente', data.correctionsPending], ['Examens validés / réalisés', data.examsValidatedAsPerformed], ['Examens non réalisés', data.examsNotPerformed],
-      ['Montant externe à payer', `${Number(data.amountDueHTG || 0).toLocaleString('fr-HT')} HTG`], ['Montant déjà payé', `${Number(data.amountPaidHTG || 0).toLocaleString('fr-HT')} HTG`]
-    ];
-    byId('pr-admin-metrics').innerHTML = metrics.map(([label, value]) => `<div class="pr-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value ?? 0)}</strong></div>`).join('');
-  } catch (error) { showNotice(error.message, 'error'); }
+    const response = await call('healthAdminGetPartnerResultsOverview', { query: { days } });
+    state.overview = response.overview || null;
+    renderAdminOverview(state.overview, days);
+  } catch (error) {
+    state.overview = null;
+    renderAdminOverview(null, days);
+    showNotice(`Les données réelles du tableau de bord n’ont pas pu être chargées : ${error.message}`, 'error');
+  }
+}
+function metricText(value, currency = false) {
+  const number = Number(value);
+  if (value === null || value === undefined || value === '' || !Number.isFinite(number)) return '—';
+  return `${number.toLocaleString('fr-HT')}${currency ? ' HTG' : ''}`;
+}
+function dashboardDate(value) {
+  const parsed = value?.toDate ? value.toDate() : new Date(value || '');
+  return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString('fr-HT', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Port-au-Prince' });
+}
+function renderOverviewTable(id, rows, columns, emptyText) {
+  const host = byId(id);
+  if (!host) return;
+  if (!Array.isArray(rows) || !rows.length) { host.innerHTML = `<div class="pr-empty-data">${escapeHtml(emptyText)}</div>`; return; }
+  host.innerHTML = `<table class="pr-table"><thead><tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(column.render ? column.render(row) : row[column.key] || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function renderTrendChart(trend) {
+  const host = byId('pr-orders-chart');
+  if (!host) return;
+  if (!Array.isArray(trend) || !trend.length) { host.innerHTML = '<div class="pr-empty-data">Aucune donnée de tendance sur cette période.</div>'; return; }
+  const width = 760, height = 168, left = 34, right = 8, top = 8, bottom = 24;
+  const values = trend.flatMap((item) => [Number(item.assignedOrders), Number(item.resultsReceived)]).filter(Number.isFinite);
+  const max = Math.max(1, ...values);
+  const x = (index) => left + (trend.length <= 1 ? 0 : index * (width - left - right) / (trend.length - 1));
+  const y = (value) => top + (height - top - bottom) * (1 - Number(value || 0) / max);
+  const points = (key) => trend.map((item, index) => `${index ? 'L' : 'M'}${x(index).toFixed(1)},${y(item[key]).toFixed(1)}`).join(' ');
+  const orderArea = `${points('assignedOrders')} L${x(trend.length - 1).toFixed(1)},${height - bottom} L${left},${height - bottom} Z`;
+  const tickIndices = [...new Set([0, Math.round((trend.length - 1) / 4), Math.round((trend.length - 1) / 2), Math.round((trend.length - 1) * .75), trend.length - 1])];
+  host.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="pr-chart-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1976e8" stop-opacity=".2"/><stop offset="1" stop-color="#1976e8" stop-opacity="0"/></linearGradient></defs>${[0,.25,.5,.75,1].map((fraction) => { const gridY = top + fraction * (height - top - bottom); return `<line class="pr-chart-grid" x1="${left}" x2="${width-right}" y1="${gridY}" y2="${gridY}"/><text class="pr-chart-axis" x="2" y="${gridY+3}">${Math.round(max * (1 - fraction))}</text>`; }).join('')}<path class="pr-chart-area" d="${orderArea}"/><path class="pr-chart-orders" d="${points('assignedOrders')}"/><path class="pr-chart-results" d="${points('resultsReceived')}"/>${trend.map((item,index)=>`<circle class="pr-chart-point" cx="${x(index)}" cy="${y(item.assignedOrders)}" r="2.5" fill="#1976e8"><title>${escapeHtml(item.label)} · commandes : ${metricText(item.assignedOrders)}</title></circle><circle class="pr-chart-point" cx="${x(index)}" cy="${y(item.resultsReceived)}" r="2.5" fill="#14aa85"><title>${escapeHtml(item.label)} · résultats : ${metricText(item.resultsReceived)}</title></circle>`).join('')}${tickIndices.map((index)=>`<text class="pr-chart-axis" text-anchor="${index===0?'start':index===trend.length-1?'end':'middle'}" x="${x(index)}" y="${height-5}">${escapeHtml(trend[index].label)}</text>`).join('')}</svg>`;
+}
+function renderPartnerDonut(data) {
+  const host = byId('pr-partner-donut');
+  if (!host) return;
+  const groups = Array.isArray(data) ? data : [];
+  const total = groups.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+  if (!groups.length || !total) { host.innerHTML = '<div class="pr-empty-data">Aucun partenaire actif enregistré.</div>'; return; }
+  const colors = ['#8d63e8', '#1976e8', '#14aa85'];
+  let cursor = 0;
+  const stops = groups.map((item, index) => { const start = cursor; cursor += Number(item.count) / total * 360; return `${colors[index % colors.length]} ${start.toFixed(2)}deg ${cursor.toFixed(2)}deg`; });
+  host.innerHTML = `<div class="pr-donut" style="background:conic-gradient(${stops.join(',')})"><div class="pr-donut-center"><strong>${metricText(total)}</strong><span>Partenaires actifs</span></div></div><ul class="pr-donut-legend">${groups.map((item,index)=>`<li><i style="background:${colors[index % colors.length]}"></i><span>${escapeHtml(item.label)}</span><strong>${metricText(item.count)}</strong><small>${Math.round(Number(item.count)/total*100)}%</small></li>`).join('')}</ul>`;
+}
+function renderAssignedOrders() {
+  const rows = state.overview?.assignedOrders || state.overview?.recentAssignedOrders || [];
+  const columns = [{label:'N° Commande',key:'id'}, {label:'Type',render:(row)=>row.providerType === 'imaging' ? 'Imagerie' : 'Laboratoire'}, {label:'Partenaire',key:'partnerName'}, {label:'Date',render:(row)=>dashboardDate(row.createdAt)}];
+  const count = state.overview?.assignedOrdersInPeriod;
+  byId('pr-assigned-orders-scope').textContent = Number.isFinite(Number(count)) ? `Les ${metricText(rows.length)} plus récentes sur ${metricText(count)} commandes affectées dans la période.` : '';
+  renderOverviewTable('pr-assigned-orders', rows, columns, 'Aucune commande payée et affectée sur cette période.');
+}
+function renderNoResultOrders() {
+  const rows = state.overview?.recentOrdersWithoutResult || [];
+  byId('pr-no-results-scope').textContent = `Commandes vérifiées dans la période sélectionnée; les 100 affectations les plus récentes sont comparées aux résultats reçus.`;
+  renderOverviewTable('pr-no-results', rows, [{label:'N° Commande',key:'id'}, {label:'Type',render:(row)=>row.providerType === 'imaging' ? 'Imagerie' : 'Laboratoire'}, {label:'Partenaire',key:'partnerName'}, {label:'Date',render:(row)=>dashboardDate(row.createdAt)}], 'Aucune commande sans résultat parmi les 100 affectations les plus récentes.');
+}
+function renderAdminOverview(data, days) {
+  const metrics = [
+    ['Partenaires actifs', data?.activePartners, '♧', '#1976e8', '#eaf2ff', false, 'Total des partenaires actifs'],
+    ['Laboratoires actifs', data?.activeLaboratories, '⚗', '#8d63e8', '#f1eaff', false, 'Partenaires laboratoires'],
+    ['Centres d’imagerie actifs', data?.activeImagingCenters, '▣', '#14aa85', '#e8faf4', false, 'Partenaires d’imagerie'],
+    ['Commandes affectées aujourd’hui', data?.assignedToday, '▤', '#e29a19', '#fff5df', false, 'Total des commandes assignées'],
+    ['Commandes en attente de résultat', data?.ordersAwaitingResultToday, '◷', '#1976e8', '#eaf2ff', false, 'En attente de résultats'],
+    ['Résultats reçus aujourd’hui', data?.resultsReceivedToday, '▤', '#e64d64', '#fff0f2', false, 'Résultats soumis'],
+    ['Résultats à contrôler', data?.awaitingReview, '◉', '#8d63e8', '#f1eaff', false, 'En attente de validation'],
+    ['Corrections en attente', data?.correctionsPending, '✎', '#e29a19', '#fff5df', false, 'Résultats nécessitant une correction'],
+    ['Examens validés / réalisés', data?.examsValidatedAsPerformed, '✓', '#14aa85', '#e8faf4', false, 'Examens validés'],
+    ['Examens non réalisés / annulés', data?.examsNotPerformed, '×', '#e64d64', '#fff0f2', false, 'Annulés ou non réalisés'],
+    ['Montant à payer aux prestataires', data?.amountDueHTG, '$', '#1976e8', '#eaf2ff', true, 'Total à régler'],
+    ['Montant déjà payé', data?.amountPaidHTG, '▣', '#14aa85', '#e8faf4', true, 'Total des paiements effectués']
+  ];
+  byId('pr-admin-metrics').innerHTML = metrics.map(([label, value, icon, color, wash, currency, caption]) => `<div class="pr-metric" data-icon="${icon}" style="--metric-color:${color};--metric-wash:${wash}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(metricText(value, currency))}</strong><small>${escapeHtml(caption)}</small></div>`).join('');
+  byId('pr-trend-period').textContent = `${days} derniers jours`;
+  renderTrendChart(data?.trend);
+  renderPartnerDonut(data?.activePartnerBreakdown);
+  const dateColumn = { label:'Date', render:(row)=>dashboardDate(row.createdAt) };
+  renderOverviewTable('pr-recent-orders', data?.recentAssignedOrders, [{label:'Commande',key:'id'}, {label:'Type',render:(row)=>row.providerType === 'imaging' ? 'Imagerie' : 'Laboratoire'}, {label:'Partenaire',key:'partnerName'}, dateColumn], 'Aucune commande affectée sur cette période.');
+  renderOverviewTable('pr-recent-results', data?.recentResults, [{label:'Commande',key:'orderId'}, {label:'Type',render:(row)=>row.providerType === 'imaging' ? 'Imagerie' : 'Laboratoire'}, {label:'Partenaire',key:'partnerName'}, dateColumn], 'Aucun résultat reçu sur cette période.');
+  renderOverviewTable('pr-recent-review', data?.recentResultsAwaitingReview, [{label:'Commande',key:'orderId'}, {label:'Type',render:(row)=>row.providerType === 'imaging' ? 'Imagerie' : 'Laboratoire'}, {label:'Partenaire',key:'partnerName'}, dateColumn], 'Aucun résultat en attente de contrôle.');
+  renderAssignedOrders();
+  renderNoResultOrders();
 }
 async function loadPartnerOverview() {
   try { const response = await call('healthPartnerGetResultsOverview'); renderMetrics(response.overview || {}); }
@@ -644,6 +758,7 @@ byId('pr-refresh-results').addEventListener('click', loadAdminResults);
 byId('pr-export-results').addEventListener('click', exportAdminResultsCsv);
 byId('pr-export-settlements').addEventListener('click', exportAdminSettlementsCsv);
 byId('pr-create-settlement').addEventListener('click', createPartnerSettlement);
+byId('pr-overview-range').addEventListener('change', (event) => loadAdminOverview(Number(event.currentTarget.value)));
 ['pr-filter-partner', 'pr-filter-exam', 'pr-filter-status', 'pr-filter-type', 'pr-filter-payment', 'pr-filter-from', 'pr-filter-to'].forEach((id) => byId(id).addEventListener('change', () => loadAdminResults()));
 byId('pr-filter-search').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); loadAdminResults(); } });
 byId('pr-create-partner').addEventListener('submit', createPartner);

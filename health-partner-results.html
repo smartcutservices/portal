@@ -7,11 +7,18 @@
   <title>Portail Partenaires Résultats · Smart Cut Health</title>
   <link rel="icon" type="image/svg+xml" href="./portal-favicon.svg">
   <link rel="stylesheet" href="./site-foundation.css?v=20260929-1">
-  <link rel="stylesheet" href="./health-partner-results.css?v=20261001-embedded-polish-1">
+  <link rel="stylesheet" href="./health-partner-results.css?v=20261002-admin-dashboard-2">
 </head>
 <body class="partner-results-page">
-  <header class="pr-topbar">
-    <a class="pr-brand" href="./"><span>SC</span><strong>Smart Cut Health<small>Portail Partenaires Résultats</small></strong></a>
+  <header class="pr-topbar" id="pr-admin-topbar">
+    <a class="pr-brand" href="./"><span>SC</span><strong>Smart Cut Health<small>Administration partenaires</small></strong></a>
+    <label class="pr-global-search"><span aria-hidden="true">⌕</span><input id="pr-global-search" type="search" placeholder="Rechercher un partenaire, un examen, une commande…" autocomplete="off"></label>
+    <div class="pr-topbar-actions">
+      <button id="pr-menu-toggle" class="pr-menu-toggle" type="button" aria-controls="pr-nav" aria-expanded="false" aria-label="Ouvrir le menu">☰</button>
+      <button id="pr-notifications-button" class="pr-icon-button" type="button" aria-label="Ouvrir les alertes" title="Alertes" hidden>♧<span id="pr-notification-dot" hidden></span></button>
+      <button id="pr-module-switcher" class="pr-admin-identity" type="button" aria-haspopup="dialog" hidden><span class="pr-admin-avatar">A</span><span><strong>Admin</strong><small>Partenaires</small></span><span aria-hidden="true">⌄</span></button>
+      <button id="pr-admin-logout" class="pr-quiet" type="button" hidden>Déconnexion</button>
+    </div>
   </header>
   <main class="pr-shell">
     <section id="pr-login" class="pr-login pr-panel">
@@ -40,14 +47,14 @@
 
     <section id="pr-app" hidden>
       <aside class="pr-sidebar">
-        <div class="pr-sidebar-heading"><p class="pr-eyebrow">Espace sécurisé</p><strong>Centre de pilotage</strong><small>Laboratoires · Imagerie</small></div>
+        <div class="pr-sidebar-heading"><div class="pr-admin-brand"><span>SC</span><strong>Smart Cut Health<small>Admin Partenaires</small></strong></div><p class="pr-eyebrow">Admin partenaires</p><strong>Centre de pilotage</strong><small>Laboratoires · Imagerie</small></div>
         <nav id="pr-nav" class="pr-nav" aria-label="Navigation portail"></nav>
         <div class="pr-sidebar-foot"><span class="pr-secure-dot"></span> Connexion sécurisée</div>
       </aside>
       <div id="pr-workspace" class="pr-workspace">
       <header class="pr-heading">
         <div><p class="pr-eyebrow" id="pr-page-context">Portail partenaires</p><h1 id="pr-title">Résultats</h1><p id="pr-identity"></p></div>
-        <div class="pr-header-actions"><div id="pr-user" class="pr-user" hidden></div><button id="pr-menu-toggle" class="pr-menu-toggle" type="button" aria-controls="pr-nav" aria-expanded="false" aria-label="Ouvrir le menu">☰</button><button id="pr-logout" class="pr-quiet">Déconnexion</button></div>
+        <div class="pr-header-actions"><div id="pr-user" class="pr-user" hidden></div><button id="pr-logout" class="pr-quiet">Déconnexion</button></div>
       </header>
       <button id="pr-nav-backdrop" class="pr-nav-backdrop" type="button" aria-label="Fermer le menu" tabindex="-1"></button>
       <section id="pr-notice" class="pr-notice" role="status" hidden></section>
@@ -84,7 +91,21 @@
       </section>
 
       <section id="pr-admin-view" class="pr-view" hidden>
-        <article class="pr-panel" id="pr-overview-panel"><p class="pr-eyebrow">Vue d’ensemble</p><h2>Activité du portail</h2><div id="pr-admin-metrics" class="pr-metrics"></div></article>
+        <article class="pr-panel pr-dashboard-overview" id="pr-overview-panel">
+          <div class="pr-overview-heading"><div><p class="pr-eyebrow">Administration · Résultats partenaires</p><h2>Vue d’ensemble</h2><p>Suivi global des partenaires, commandes, résultats et paiements.</p></div><label class="pr-date-range">Période<select id="pr-overview-range"><option value="30" selected>30 derniers jours</option><option value="7">7 derniers jours</option><option value="90">90 derniers jours</option></select></label></div>
+          <div id="pr-admin-metrics" class="pr-metrics" aria-live="polite"></div>
+          <div class="pr-dashboard-analytics">
+            <section class="pr-dashboard-card pr-trend-card"><div class="pr-card-heading"><h3>Évolution des commandes</h3><span id="pr-trend-period">30 derniers jours</span></div><div class="pr-chart-legend"><span><i class="pr-legend-orders"></i>Commandes affectées*</span><span><i class="pr-legend-results"></i>Résultats reçus</span></div><p class="pr-dashboard-notes">* Comptées à la date réelle de création, puis filtrées sur les commandes payées et affectées.</p><div id="pr-orders-chart" class="pr-chart" role="img" aria-label="Évolution des commandes et résultats"></div></section>
+            <section class="pr-dashboard-card pr-partner-breakdown"><div class="pr-card-heading"><h3>Répartition des partenaires actifs</h3></div><div id="pr-partner-donut" class="pr-donut-layout"></div></section>
+          </div>
+          <div class="pr-dashboard-tables">
+            <section class="pr-dashboard-card"><div class="pr-card-heading"><h3>Dernières commandes affectées</h3><button type="button" class="pr-text-button" data-open-module="admin-orders">Voir tout</button></div><div id="pr-recent-orders" class="pr-table-wrap"></div></section>
+            <section class="pr-dashboard-card"><div class="pr-card-heading"><h3>Résultats récemment reçus</h3><button type="button" class="pr-text-button" data-open-module="admin-results">Voir tout</button></div><div id="pr-recent-results" class="pr-table-wrap"></div></section>
+            <section class="pr-dashboard-card"><div class="pr-card-heading"><h3>Résultats à contrôler</h3><button type="button" class="pr-text-button" data-open-module="admin-review">Voir tout</button></div><div id="pr-recent-review" class="pr-table-wrap"></div></section>
+          </div>
+        </article>
+        <article class="pr-panel pr-module" id="pr-assigned-orders-panel"><p class="pr-eyebrow">Suivi des commandes</p><h2>Commandes affectées</h2><p id="pr-assigned-orders-scope" class="pr-dashboard-notes"></p><div id="pr-assigned-orders" class="pr-table-wrap"></div></article>
+        <article class="pr-panel pr-module" id="pr-no-result-panel"><p class="pr-eyebrow">Résultats manquants</p><h2>Examens sans résultat</h2><p id="pr-no-results-scope" class="pr-dashboard-notes"></p><div id="pr-no-results" class="pr-table-wrap"></div></article>
         <article class="pr-panel" id="pr-admin-alerts-panel"><p class="pr-eyebrow">Litiges et anomalies</p><h2>Alertes du portail</h2><div id="pr-admin-alerts" class="pr-list"></div></article>
 
         <article class="pr-panel" id="pr-internal-panel">
@@ -135,7 +156,11 @@
     </section>
   </main>
 
+  <dialog id="pr-module-dialog" class="pr-module-dialog" aria-labelledby="pr-module-dialog-title">
+    <form method="dialog"><button class="pr-dialog-close" value="cancel" aria-label="Fermer">×</button><p class="pr-eyebrow">Espace administration</p><h2 id="pr-module-dialog-title">Changer de sous-module</h2><p>Choisissez l’espace Smart Cut Health à ouvrir.</p><div class="pr-module-options"><button type="button" data-parent-health-module="pharmacy"><span>Pharmacie</span><small>Catalogue, stock et commandes</small></button><button type="button" data-parent-health-module="laboratory"><span>Laboratoire</span><small>Examens et résultats</small></button><button type="button" data-parent-health-module="imaging"><span>Imagerie médicale</span><small>Centres et examens</small></button><button type="button" data-parent-health-module="medical"><span>Médecine</span><small>Consultations et rendez-vous</small></button></div></form>
+  </dialog>
+
   <dialog id="pr-review-dialog" class="pr-dialog"><form method="dialog" id="pr-review-form"><button class="pr-dialog-close" value="cancel" aria-label="Fermer">×</button><p class="pr-eyebrow">Revue administrative</p><h2 id="pr-review-title">Résultat</h2><section id="pr-review-summary" class="pr-summary"></section><div id="pr-review-files"></div><section id="pr-result-history" class="pr-list" aria-label="Historique des versions"></section><label>Motif requis pour correction / non réalisé<textarea id="pr-review-reason" rows="3"></textarea></label><div class="pr-actions"><button type="button" data-review="REQUEST_CORRECTION" class="pr-quiet">Demander une correction</button><button type="button" data-review="NOT_PERFORMED" class="pr-quiet">Non réalisé</button><button type="button" data-review="VALIDATE" class="pr-primary">Valider · réalisé</button><button type="button" data-transfer class="pr-primary" hidden>Transférer au patient</button></div></form></dialog>
-  <script type="module" src="./health-partner-results.js?v=20261001-embedded-polish-1"></script>
+  <script type="module" src="./health-partner-results.js?v=20261002-admin-dashboard-2"></script>
 </body>
 </html>

@@ -10,6 +10,7 @@ const { RESULT_STATUS, requiredCategories, validateResultFiles, canReviewResult,
 const { isManagedProviderId } = require('./lib/managedProvider');
 const { isPayoutEligible, payoutTotals } = require('./lib/partnerResultPayoutWorkflow');
 const { scanPartnerResultFile } = require('./lib/partnerResultsMalwareScan');
+const { buildPartnerResultsTrend } = require('./lib/partnerResultsDashboard');
 
 const HEALTH_RESULTS_SCANNER_URL = defineString('HEALTH_RESULTS_SCANNER_URL', { default: '' });
 
@@ -446,15 +447,20 @@ function buildPartnerResults(sst) {
     const localMidnightUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)) - offsetMinutes * 60_000;
     const todayStart = new Date(localMidnightUtc).toISOString();
     const tomorrowStart = new Date(localMidnightUtc + 86_400_000).toISOString();
+    const requestedDays = Number(req.query?.days);
+    const days = [7, 30, 90].includes(requestedDays) ? requestedDays : 30;
+    const windowStart = new Date(localMidnightUtc - (days - 1) * 86_400_000).toISOString();
     const results = db.collection('healthPartnerResults');
     const count = async (query) => (await query.count().get()).data().count;
     const sum = async (query) => {
       const snapshot = await query.aggregate({ amount: adminSDK.firestore.AggregateField.sum('partnerAmountSnapshot') }).get();
       return Number(snapshot.data().amount) || 0;
     };
-    const [partnersSnap, ordersTodaySnap, resultsToday, awaitingReview, corrections, validated, notPerformed, eligible, inSettlement, paid] = await Promise.all([
-      db.collection('clients').where('partnerStatus', '==', 'active').select('partnerType', 'partnerProfile').get(),
+    const [partnersSnap, ordersTodaySnap, ordersWindowSnap, resultsWindowSnap, resultsToday, awaitingReview, corrections, validated, notPerformed, eligible, inSettlement, paid] = await Promise.all([
+      db.collection('clients').where('partnerStatus', '==', 'active').select('partnerStatus', 'partnerType', 'partnerProfile').get(),
       db.collection('healthOrders').where('createdAt', '>=', todayStart).where('createdAt', '<', tomorrowStart).select('kind', 'providerType', 'providerUid', 'status', 'paymentStatus', 'items', 'examId', 'orderItemId', 'catalogExamId', 'examName', 'name', 'partnerResultId', 'resultId').get(),
+      db.collection('healthOrders').where('createdAt', '>=', windowStart).where('createdAt', '<', tomorrowStart).select('createdAt', 'kind', 'providerType', 'providerUid', 'status', 'paymentStatus', 'items', 'examId', 'orderItemId', 'catalogExamId', 'examName', 'name').get(),
+      results.where('createdAt', '>=', windowStart).where('createdAt', '<', tomorrowStart).orderBy('createdAt', 'desc').select('orderId', 'partnerUid', 'providerType', 'source', 'status', 'createdAt', 'examName').get(),
       count(results.where('createdAt', '>=', todayStart).where('createdAt', '<', tomorrowStart)),
       count(results.where('status', '==', RESULT_STATUS.PENDING_REVIEW)),
       count(results.where('status', '==', RESULT_STATUS.CORRECTION_REQUESTED)),
@@ -470,6 +476,41 @@ function buildPartnerResults(sst) {
       const active = ACTIVE_ORDER_STATUSES.has(String(order.status || '').toUpperCase()) || (order.kind === 'laboratory_exam' && (order.items || []).some((item) => ['PERFORMED', 'COMPLETED', 'EXAM_COMPLETED'].includes(String(item.realizationStatus || '').toUpperCase())));
       return isExam && Boolean(order.providerUid) && isEligiblePaidOrder(order) && active;
     });
+    const isAssignedPartnerOrder = (order) => {
+      const providerType = String(order.providerType || '').toLowerCase();
+      const isExam = (order.kind === 'laboratory_exam' && providerType === 'laboratory') || (order.kind === 'imaging' && providerType === 'imaging');
+      const active = ACTIVE_ORDER_STATUSES.has(String(order.status || '').toUpperCase()) || (order.kind === 'laboratory_exam' && (order.items || []).some((item) => ['PERFORMED', 'COMPLETED', 'EXAM_COMPLETED'].includes(String(item.realizationStatus || '').toUpperCase())));
+      return isExam && Boolean(order.providerUid) && !isManagedProviderId(order.providerUid) && isEligiblePaidOrder(order) && active;
+    };
+    const assignedOrdersWindow = ordersWindowSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(isAssignedPartnerOrder);
+    const resultRowsWindow = resultsWindowSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const trend = buildPartnerResultsTrend({ days, now: new Date(), orders: assignedOrdersWindow, results: resultRowsWindow, isAssignedOrder: isAssignedPartnerOrder });
+    const recentAssignedRaw = assignedOrdersWindow.slice().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))).slice(0, 100);
+    const recentResultsRaw = resultRowsWindow.slice(0, 5);
+    const recentReviewRaw = resultRowsWindow.filter((item) => item.status === RESULT_STATUS.PENDING_REVIEW).slice(0, 5);
+    const partnerUids = [...new Set([
+      ...recentAssignedRaw.map((item) => item.providerUid),
+      ...recentResultsRaw.map((item) => item.partnerUid)
+    ].filter((uid) => uid && !isManagedProviderId(uid)))];
+    const partnerDocs = partnerUids.length ? await db.getAll(...partnerUids.map((uid) => db.collection('clients').doc(uid))) : [];
+    const partnerNames = new Map(partnerDocs.map((doc) => {
+      const data = doc.data() || {};
+      const profile = data.partnerProfile || data.labProfile || data.imagingProfile || {};
+      return [doc.id, profile.businessName || profile.name || data.displayName || doc.id];
+    }));
+    const partnerLabel = (uid) => partnerNames.get(uid) || 'Nom indisponible';
+    const recentAssignedOrders = recentAssignedRaw.slice(0, 5).map((item) => ({ id: item.id, providerType: item.providerType, partnerName: partnerLabel(item.providerUid), createdAt: item.createdAt || null }));
+    const assignedOrders = recentAssignedRaw.map((item) => ({ id: item.id, providerType: item.providerType, partnerName: partnerLabel(item.providerUid), createdAt: item.createdAt || null }));
+    const resultOrderIds = new Set(resultRowsWindow.map((item) => item.orderId).filter(Boolean));
+    const recentOrdersWithoutResult = recentAssignedRaw.filter((item) => !resultOrderIds.has(item.id)).slice(0, 5).map((item) => ({ id: item.id, providerType: item.providerType, partnerName: partnerLabel(item.providerUid), createdAt: item.createdAt || null }));
+    const toPublicDashboardResult = (item) => ({ id: item.id, orderId: item.orderId || '—', providerType: item.providerType || '—', partnerName: item.source === 'smartcut-health' ? 'Smart Cut Health' : partnerLabel(item.partnerUid), createdAt: item.createdAt || null, status: item.status || '—' });
+    const recentResults = recentResultsRaw.slice(0, 5).map(toPublicDashboardResult);
+    const recentResultsAwaitingReview = recentReviewRaw.map(toPublicDashboardResult);
+    const partnerType = (data) => String(data.partnerType || data.partnerProfile?.providerType || data.partnerProfile?.type || '').toLowerCase();
+    const activeLaboratories = activePartners.filter((data) => ['laboratory', 'mixed'].includes(partnerType(data))).length;
+    const activeImagingCenters = activePartners.filter((data) => ['imaging', 'mixed'].includes(partnerType(data))).length;
+    const activeMixedPartners = activePartners.filter((data) => partnerType(data) === 'mixed').length;
+    const unclassifiedPartners = Math.max(0, activePartners.length - activeLaboratories - activeImagingCenters + activeMixedPartners);
     const resultsForTodayOrders = [];
     for (let index = 0; index < assignedOrdersToday.length; index += 30) {
       const orderIds = assignedOrdersToday.slice(index, index + 30).map((order) => order.id);
@@ -483,8 +524,8 @@ function buildPartnerResults(sst) {
     await audit(user.uid, 'partner_results_overview_viewed', 'healthPartnerResults', {});
     res.status(200).json({ ok: true, overview: {
       activePartners: activePartners.length,
-      activeLaboratories: activePartners.filter((data) => ['laboratory', 'mixed'].includes(String(data.partnerType || '').toLowerCase())).length,
-      activeImagingCenters: activePartners.filter((data) => ['imaging', 'mixed'].includes(String(data.partnerType || '').toLowerCase())).length,
+      activeLaboratories,
+      activeImagingCenters,
       assignedToday,
       ordersAwaitingResultToday,
       resultsReceivedToday: resultsToday,
@@ -493,7 +534,21 @@ function buildPartnerResults(sst) {
       examsValidatedAsPerformed: validated,
       examsNotPerformed: notPerformed,
       amountDueHTG: externalResultsAwaitingPayment,
-      amountPaidHTG: Math.round(paid * 100) / 100
+      amountPaidHTG: Math.round(paid * 100) / 100,
+      activePartnerBreakdown: [
+        { label: 'Laboratoires', count: activeLaboratories - activeMixedPartners },
+        { label: 'Imagerie médicale', count: activeImagingCenters - activeMixedPartners },
+        { label: 'Laboratoire et imagerie', count: activeMixedPartners },
+        { label: 'Autres partenaires', count: unclassifiedPartners }
+      ].filter((item) => item.count > 0),
+      trend,
+      recentAssignedOrders,
+      assignedOrders,
+      recentResults,
+      recentResultsAwaitingReview,
+      recentOrdersWithoutResult,
+      assignedOrdersDisplayed: assignedOrders.length,
+      assignedOrdersInPeriod: assignedOrdersWindow.length
     } });
   }));
 

@@ -60,6 +60,20 @@ test('partner creation reproduces the full two-column reference form and require
   assert.match(api, /statusReason: statusChanged \? statusReason \|\| null : current\.partnerProfile\?\.statusReason/);
 });
 
+test('partner directory matches the reference layout and only renders live API partner data', () => {
+  for (const id of ['pr-partner-summary', 'pr-partner-search', 'pr-partner-filter-type', 'pr-partner-filter-status', 'pr-partner-filter-department', 'pr-partner-filter-commune', 'pr-partner-reset-filters', 'pr-partner-pages', 'pr-partner-page-size', 'pr-partner-profile-dialog']) {
+    assert.ok(html.includes(`id="${id}"`), `missing partner directory control ${id}`);
+  }
+  assert.match(script, /call\('healthAdminListResultsPartners'\)/);
+  assert.match(script, /partners\.filter\(\(partner\) => partnerHasService/);
+  assert.match(script, /state\.partnersLoaded \? Number\(value\)\.toLocaleString/);
+  assert.match(script, /data-partner-action="profile"/);
+  assert.match(script, /data-partner-action="report"/);
+  assert.match(css, /\.pr-partner-summary\{display:grid;grid-template-columns:repeat\(4/);
+  assert.match(css, /\.pr-partner-table\{width:100%;min-width:/);
+  assert.match(html, /data-parent-health-module="partners"/);
+});
+
 test('administration is limited to the embedded dashboard and portal sign-in is partner-only', () => {
   assert.match(html, /Identifiant partenaire ou e-mail du compte partenaire/);
   assert.doesNotMatch(html, /e-mail administrateur/i);

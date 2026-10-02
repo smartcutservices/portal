@@ -13,7 +13,7 @@ if (embeddedAdminContext) {
 const byId = (id) => document.getElementById(id);
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const state = { user: null, token: null, mode: null, lookup: null, results: [], corrections: [], orders: [], partners: [], settlements: [], partnerAudit: [], adminAudit: [], activeResult: null, overview: null, loginAuditRecorded: false, partnerAuditCursor: null, partnerAuditHasMore: false, adminCursor: null, adminHasMore: false, partnerOrderCursor: null, partnerOrderHasMore: false, partnerResultCursor: null, partnerResultHasMore: false, correctionCursor: null, correctionsHasMore: false, settlementCursor: null, settlementsHasMore: false };
+const state = { user: null, token: null, mode: null, lookup: null, results: [], corrections: [], orders: [], partners: [], partnersLoaded: false, partnerPage: 1, settlements: [], partnerAudit: [], adminAudit: [], activeResult: null, overview: null, loginAuditRecorded: false, partnerAuditCursor: null, partnerAuditHasMore: false, adminCursor: null, adminHasMore: false, partnerOrderCursor: null, partnerOrderHasMore: false, partnerResultCursor: null, partnerResultHasMore: false, correctionCursor: null, correctionsHasMore: false, settlementCursor: null, settlementsHasMore: false };
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 const legacyContractsField = document.querySelector('#pr-create-partner [name="contractPaths"]')?.closest('label');
@@ -106,6 +106,7 @@ function setMode(mode) {
       if (module === 'admin-results' || module === 'admin-review' || module === 'admin-corrections' || module === 'admin-validated') loadAdminResults().catch((error) => showNotice(error.message, 'error'));
       if (module === 'admin-no-result') renderNoResultOrders();
       if (module === 'admin-orders') renderAssignedOrders();
+      if (module === 'admin-partners') renderAdminPartners();
     }
   };
   $$('#pr-nav button[data-module-target]').forEach((button) => button.addEventListener('click', () => { activate(button.dataset.moduleTarget); closeMenu(); }));
@@ -123,7 +124,7 @@ function setMode(mode) {
     notificationButton?.addEventListener('click', () => { moduleDialog?.close(); nav.querySelector('[data-module-target="admin-alerts"]')?.click(); });
     moduleDialog?.querySelectorAll('[data-parent-health-module]').forEach((button) => button.addEventListener('click', () => {
       const module = button.dataset.parentHealthModule;
-      if (!['pharmacy', 'laboratory', 'imaging', 'medical'].includes(module)) return;
+      if (!['pharmacy', 'laboratory', 'imaging', 'medical', 'partners'].includes(module)) return;
       const parentOrigin = new URLSearchParams(location.search).get('parentOrigin');
       if (embeddedAdminContext && parentOrigin && window.parent !== window) window.parent.postMessage({ type: 'smartcut-health-module-switch', module }, parentOrigin);
       moduleDialog.close();
@@ -131,6 +132,12 @@ function setMode(mode) {
     byId('pr-global-search')?.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter') return;
       event.preventDefault();
+      if (byId('pr-workspace').dataset.activeModule === 'admin-partners') {
+        byId('pr-partner-search').value = event.currentTarget.value.trim();
+        state.partnerPage = 1;
+        renderAdminPartners();
+        return;
+      }
       const input = byId('pr-filter-search');
       if (input) input.value = event.currentTarget.value.trim();
       nav.querySelector('[data-module-target="admin-results"]')?.click();
@@ -612,19 +619,85 @@ async function transferResult(resultId) {
 }
 async function loadAdminPartners() {
   try {
-    const response = await call('healthAdminListResultsPartners'); state.partners = response.partners || [];
+    const response = await call('healthAdminListResultsPartners'); state.partners = response.partners || []; state.partnersLoaded = true;
     syncAdminFilterOptions();
-    byId('pr-partners-list').innerHTML = state.partners.length ? state.partners.map((partner) => {
-      const actions = partner.status === 'active'
-        ? `<button class="pr-quiet" data-toggle-partner="${escapeHtml(partner.uid)}" data-next-status="suspended">Suspendre</button> <button class="pr-quiet" data-toggle-partner="${escapeHtml(partner.uid)}" data-next-status="disabled">Désactiver</button>`
-        : `<button class="pr-quiet" data-toggle-partner="${escapeHtml(partner.uid)}" data-next-status="active">Réactiver</button>`;
-      return `<div class="pr-list-item"><strong>${escapeHtml(partner.name)}</strong><small>${escapeHtml(partner.providerType || (partner.services || []).join(' / '))} · ${escapeHtml(partner.status)} · ${escapeHtml(partner.partnerId || partner.uid)}</small><p>${escapeHtml((partner.phones || []).join(' · '))} · ${escapeHtml(partner.address)} · ${escapeHtml([partner.commune, partner.department, partner.country].filter(Boolean).join(', '))}</p>${(partner.contractDocuments || []).length ? `<p><strong>Documents :</strong> ${(partner.contractDocuments || []).map((doc) => `<button type="button" class="pr-quiet" data-contract-document="${escapeHtml(doc.id)}" data-partner-uid="${escapeHtml(partner.uid)}">Ouvrir · ${escapeHtml(doc.name)}</button>`).join(' ')}</p>` : '<p>Aucun justificatif joint.</p>'}<button class="pr-quiet" data-edit-partner="${escapeHtml(partner.uid)}">Modifier</button> <button class="pr-quiet" data-reset-partner="${escapeHtml(partner.uid)}" ${partner.status !== 'active' ? 'disabled title="Réactivez le compte avant de réinitialiser l’accès"' : ''}>Réinitialiser l’accès</button> ${actions}</div>`;
-    }).join('') : '<p>Aucun partenaire inscrit.</p>';
-    $$('[data-reset-partner]').forEach((button) => button.addEventListener('click', () => resetPartner(button.dataset.resetPartner)));
-    $$('[data-toggle-partner]').forEach((button) => button.addEventListener('click', () => updatePartnerStatus(button.dataset.togglePartner, button.dataset.nextStatus)));
-    $$('[data-edit-partner]').forEach((button) => button.addEventListener('click', () => editPartner(button.dataset.editPartner)));
-    $$('[data-contract-document]').forEach((button) => button.addEventListener('click', () => openPartnerContractDocument(button.dataset.partnerUid, button.dataset.contractDocument)));
-  } catch (error) { showNotice(error.message, 'error'); }
+    syncPartnerLocationFilters();
+    renderAdminPartners();
+  } catch (error) { state.partnersLoaded = false; renderAdminPartners(); showNotice(error.message, 'error'); }
+}
+const partnerHasService = (partner, service) => (partner.services || []).includes(service) || partner.providerType === service;
+function partnerStatusLabel(status) { return ({ active: 'Actif', suspended: 'Suspendu', disabled: 'Désactivé' })[String(status || '').toLowerCase()] || 'En attente'; }
+function partnerServiceLabel(partner) {
+  const services = partner.services || [];
+  if (services.includes('laboratory') && services.includes('imaging')) return 'Laboratoire / Imagerie';
+  return partner.providerType === 'imaging' || services.includes('imaging') ? 'Imagerie' : 'Laboratoire';
+}
+function renderAdminPartners() {
+  const partners = state.partners || [];
+  const totalLabs = partners.filter((partner) => partnerHasService(partner, 'laboratory')).length;
+  const totalImaging = partners.filter((partner) => partnerHasService(partner, 'imaging')).length;
+  const inactive = partners.filter((partner) => ['suspended', 'disabled'].includes(String(partner.status || '').toLowerCase())).length;
+  byId('pr-partner-summary').innerHTML = [
+    ['♧', 'Total des partenaires', partners.length, 'Tous les partenaires', 'blue'],
+    ['⚗', 'Laboratoires', totalLabs, 'Partenaires laboratoire', 'violet'],
+    ['▧', 'Centres d’imagerie', totalImaging, 'Partenaires imagerie', 'mint'],
+    ['⊘', 'Suspendus / désactivés', inactive, 'Partenaires non actifs', 'rose']
+  ].map(([icon, label, value, caption, color]) => `<article class="pr-partner-stat ${color}"><span class="pr-partner-stat-icon" aria-hidden="true">${icon}</span><div><span>${label}</span><strong>${state.partnersLoaded ? Number(value).toLocaleString('fr-HT') : '—'}</strong><small>${caption}</small></div></article>`).join('');
+
+  const term = byId('pr-partner-search').value.trim().toLocaleLowerCase('fr');
+  const type = byId('pr-partner-filter-type').value;
+  const status = byId('pr-partner-filter-status').value;
+  const department = byId('pr-partner-filter-department').value;
+  const commune = byId('pr-partner-filter-commune').value;
+  const filtered = partners.filter((partner) => {
+    const services = partner.services || [];
+    const matchesType = !type || (type === 'mixed' ? services.includes('laboratory') && services.includes('imaging') : partnerHasService(partner, type));
+    const searchText = [partner.name, partner.responsibleName, ...(partner.phones || []), partner.commune, partner.department, partner.partnerId].join(' ').toLocaleLowerCase('fr');
+    return (!term || searchText.includes(term)) && matchesType && (!status || String(partner.status || '').toLowerCase() === status) && (!department || partner.department === department) && (!commune || partner.commune === commune);
+  }).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'fr'));
+  const pageSize = Number(byId('pr-partner-page-size').value) || 10;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  state.partnerPage = Math.min(state.partnerPage, pageCount);
+  const start = (state.partnerPage - 1) * pageSize;
+  const visible = filtered.slice(start, start + pageSize);
+  const table = visible.length ? `<table class="pr-partner-table"><thead><tr><th><span class="pr-sr-only">Sélection</span><input type="checkbox" disabled aria-label="Sélectionner les partenaires de cette page"></th><th>Nom légal / nom commercial</th><th>Type(s) de service</th><th>Responsable</th><th>Téléphone(s)</th><th>Ville / Commune</th><th>Statut</th><th>Date de création</th><th>Actions</th></tr></thead><tbody>${visible.map((partner) => {
+    const statusKey = ['active', 'suspended', 'disabled'].includes(String(partner.status || '').toLowerCase()) ? String(partner.status).toLowerCase() : 'pending';
+    const statusText = partnerStatusLabel(statusKey);
+    const icon = partnerHasService(partner, 'imaging') && !partnerHasService(partner, 'laboratory') ? '▧' : '⚗';
+    const typeClass = icon === '▧' ? 'imaging' : 'laboratory';
+    return `<tr><td><input type="checkbox" disabled aria-label="Sélectionner ${escapeHtml(partner.name)}"></td><td><div class="pr-partner-name-cell"><span class="pr-partner-type-icon ${typeClass}" aria-hidden="true">${icon}</span><strong>${escapeHtml(partner.name || '—')}</strong></div></td><td><span class="pr-partner-service ${typeClass}">${escapeHtml(partnerServiceLabel(partner))}</span></td><td>${escapeHtml(partner.responsibleName || '—')}</td><td>${escapeHtml((partner.phones || []).filter(Boolean).join(', ') || '—')}</td><td>${escapeHtml(partner.commune || '—')}</td><td><span class="pr-partner-status ${statusKey}"><i></i>${statusText}</span></td><td>${dashboardDate(partner.createdAt)}</td><td><details class="pr-partner-row-menu"><summary aria-label="Actions pour ${escapeHtml(partner.name)}">•••</summary><div class="pr-partner-row-menu-items"><button type="button" data-partner-action="profile" data-partner-uid="${escapeHtml(partner.uid)}">Voir le profil</button><button type="button" data-partner-action="edit" data-partner-uid="${escapeHtml(partner.uid)}">Modifier</button><button type="button" data-partner-action="services" data-partner-uid="${escapeHtml(partner.uid)}">Définir les services autorisés</button>${statusKey === 'active' ? `<button type="button" data-partner-action="status" data-partner-uid="${escapeHtml(partner.uid)}" data-next-status="suspended">Suspendre</button><button type="button" data-partner-action="status" data-partner-uid="${escapeHtml(partner.uid)}" data-next-status="disabled">Désactiver</button>` : `<button type="button" data-partner-action="status" data-partner-uid="${escapeHtml(partner.uid)}" data-next-status="active">Activer le compte</button>`}<button type="button" data-partner-action="reset" data-partner-uid="${escapeHtml(partner.uid)}" ${statusKey !== 'active' ? 'disabled title="Réactivez le compte avant de réinitialiser l’accès"' : ''}>Réinitialiser l’accès</button><button type="button" data-partner-action="results" data-partner-uid="${escapeHtml(partner.uid)}">Voir les résultats déposés</button><button type="button" data-partner-action="report" data-partner-uid="${escapeHtml(partner.uid)}">Voir le rapport du partenaire</button></div></details></td></tr>`;
+  }).join('')}</tbody></table>` : `<div class="pr-partner-empty"><strong>${!state.partnersLoaded ? 'Chargement des partenaires…' : partners.length ? 'Aucun partenaire ne correspond aux filtres.' : 'Aucun partenaire enregistré.'}</strong><span>${!state.partnersLoaded ? 'Les données seront affichées dès que le chargement est terminé.' : partners.length ? 'Modifiez les critères de recherche.' : 'Les partenaires créés apparaîtront ici.'}</span></div>`;
+  byId('pr-partners-list').innerHTML = table;
+  byId('pr-partner-page-label').textContent = filtered.length ? `Affichage de ${start + 1} à ${Math.min(start + pageSize, filtered.length)} sur ${filtered.length} partenaire${filtered.length === 1 ? '' : 's'}` : '0 partenaire';
+  byId('pr-partner-pages').innerHTML = pageCount > 1 ? `<button type="button" data-partner-page="${Math.max(1, state.partnerPage - 1)}" aria-label="Page précédente" ${state.partnerPage === 1 ? 'disabled' : ''}>‹</button>${Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => `<button type="button" data-partner-page="${page}" class="${page === state.partnerPage ? 'active' : ''}" aria-current="${page === state.partnerPage ? 'page' : 'false'}">${page}</button>`).join('')}<button type="button" data-partner-page="${Math.min(pageCount, state.partnerPage + 1)}" aria-label="Page suivante" ${state.partnerPage === pageCount ? 'disabled' : ''}>›</button>` : '';
+}
+function syncPartnerLocationFilters() {
+  const department = byId('pr-partner-filter-department');
+  const commune = byId('pr-partner-filter-commune');
+  const selectedDepartment = department.value;
+  const selectedCommune = commune.value;
+  const setOptions = (select, values, selected) => {
+    select.innerHTML = '<option value="">Tous</option>' + values.filter(Boolean).sort((a, b) => a.localeCompare(b, 'fr')).map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+    if (values.includes(selected)) select.value = selected;
+  };
+  setOptions(department, [...new Set(state.partners.map((partner) => partner.department))], selectedDepartment);
+  const selectedDepartmentValue = department.value;
+  setOptions(commune, [...new Set(state.partners.filter((partner) => !selectedDepartmentValue || partner.department === selectedDepartmentValue).map((partner) => partner.commune))], selectedCommune);
+}
+function showPartnerProfile(uid) {
+  const partner = state.partners.find((item) => item.uid === uid);
+  if (!partner) return;
+  const rows = [
+    ['Nom légal / nom commercial', partner.name], ['Type(s) de service', partnerServiceLabel(partner)],
+    ['Responsable', partner.responsibleName], ['E-mail', partner.email], ['Téléphone(s)', (partner.phones || []).join(', ')],
+    ['Adresse', partner.address], ['Pays', partner.country], ['Département', partner.department], ['Commune', partner.commune],
+    ['NIF', partner.taxId], ['Statut', partnerStatusLabel(partner.status)], ['Date de création', dashboardDate(partner.createdAt)],
+    ['Informations complémentaires', partner.additionalInformation], ['Notes administratives', partner.administrativeNotes]
+  ].filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '');
+  byId('pr-partner-profile-title').textContent = partner.name || 'Profil partenaire';
+  byId('pr-partner-profile-content').innerHTML = `<dl>${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>${(partner.contractDocuments || []).length ? `<section class="pr-profile-documents"><h3>Documents enregistrés</h3>${partner.contractDocuments.map((doc) => `<button type="button" class="pr-quiet" data-contract-document="${escapeHtml(doc.id)}" data-partner-uid="${escapeHtml(partner.uid)}">Ouvrir · ${escapeHtml(doc.name)}</button>`).join(' ')}</section>` : ''}`;
+  byId('pr-partner-profile-dialog').showModal();
+  $$('[data-contract-document]', byId('pr-partner-profile-content')).forEach((button) => button.addEventListener('click', () => openPartnerContractDocument(button.dataset.partnerUid, button.dataset.contractDocument)));
 }
 function syncAdminFilterOptions() {
   const partnerSelect = byId('pr-filter-partner'); const examSelect = byId('pr-filter-exam');
@@ -864,6 +937,32 @@ byId('pr-create-settlement').addEventListener('click', createPartnerSettlement);
 byId('pr-overview-range').addEventListener('change', (event) => loadAdminOverview(Number(event.currentTarget.value)));
 ['pr-filter-partner', 'pr-filter-exam', 'pr-filter-status', 'pr-filter-type', 'pr-filter-payment', 'pr-filter-from', 'pr-filter-to'].forEach((id) => byId(id).addEventListener('change', () => loadAdminResults()));
 byId('pr-filter-search').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); loadAdminResults(); } });
+byId('pr-partner-search').addEventListener('input', () => { state.partnerPage = 1; renderAdminPartners(); });
+['pr-partner-filter-type', 'pr-partner-filter-status', 'pr-partner-filter-commune'].forEach((id) => byId(id).addEventListener('change', () => { state.partnerPage = 1; renderAdminPartners(); }));
+byId('pr-partner-filter-department').addEventListener('change', () => { syncPartnerLocationFilters(); state.partnerPage = 1; renderAdminPartners(); });
+byId('pr-partner-reset-filters').addEventListener('click', () => { byId('pr-partner-search').value = ''; byId('pr-partner-filter-type').value = ''; byId('pr-partner-filter-status').value = ''; byId('pr-partner-filter-department').value = ''; syncPartnerLocationFilters(); byId('pr-partner-filter-commune').value = ''; state.partnerPage = 1; renderAdminPartners(); });
+byId('pr-partner-page-size').addEventListener('change', () => { state.partnerPage = 1; renderAdminPartners(); });
+byId('pr-partner-pages').addEventListener('click', (event) => { const button = event.target.closest('[data-partner-page]'); if (!button || button.disabled) return; state.partnerPage = Number(button.dataset.partnerPage); renderAdminPartners(); });
+byId('pr-partners-list').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-partner-action]');
+  if (!button) return;
+  const { partnerUid, partnerAction, nextStatus } = button.dataset;
+  button.closest('details')?.removeAttribute('open');
+  if (partnerAction === 'profile') showPartnerProfile(partnerUid);
+  if (partnerAction === 'edit') editPartner(partnerUid);
+  if (partnerAction === 'services') editPartner(partnerUid);
+  if (partnerAction === 'status') updatePartnerStatus(partnerUid, nextStatus);
+  if (partnerAction === 'reset') resetPartner(partnerUid);
+  if (partnerAction === 'results') {
+    byId('pr-filter-partner').value = partnerUid;
+    byId('pr-nav').querySelector('[data-module-target="admin-results"]')?.click();
+  }
+  if (partnerAction === 'report') {
+    byId('pr-report-partner').value = partnerUid;
+    byId('pr-nav').querySelector('[data-module-target="admin-reports"]')?.click();
+    byId('pr-partner-report-form').requestSubmit();
+  }
+});
 setupPartnerForm();
 byId('pr-create-partner').addEventListener('submit', createPartner);
 byId('pr-partner-report-form').addEventListener('submit', loadPartnerReport);

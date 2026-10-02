@@ -1084,7 +1084,15 @@ function buildPartnerResults(sst) {
     const email = clean(payload.email, 180).toLowerCase();
     const address = clean(payload.address, 400);
     const phone = clean(payload.phone, 80);
-    if (!['laboratory', 'imaging', 'mixed'].includes(type) || !name || !email || !address || !phone) throw new HttpError(400, 'invalid-partner-profile', 'Type, nom, e-mail, adresse et téléphone requis.');
+    const requestedStatus = clean(payload.status, 30).toLowerCase();
+    const statusReason = clean(payload.reason, 800);
+    const suppliedPassword = String(payload.initialPassword || '').trim().slice(0, 128);
+    const selectedServices = Array.isArray(payload.services) ? [...new Set(payload.services.map((value) => clean(value, 30).toLowerCase()))] : null;
+    if (!['laboratory', 'imaging', 'mixed'].includes(type) || !name || !clean(payload.responsibleName, 180) || !email || !address || !phone || !clean(payload.country, 100) || !clean(payload.department, 100) || !clean(payload.commune, 120)) throw new HttpError(400, 'invalid-partner-profile', 'Type, établissement, responsable, coordonnées et localisation sont requis.');
+    if (selectedServices && (!selectedServices.length || selectedServices.some((service) => !['laboratory', 'imaging'].includes(service)) || (type === 'mixed') !== (selectedServices.length === 2) || type !== (selectedServices.length === 2 ? 'mixed' : selectedServices[0]))) throw new HttpError(400, 'invalid-partner-services', 'Sélectionnez des services autorisés valides.');
+    if (requestedStatus && !['active', 'suspended', 'disabled'].includes(requestedStatus) || requestedStatus && requestedStatus !== 'active' && statusReason.length < 5) throw new HttpError(400, 'invalid-partner-status', 'Statut invalide ou motif trop court.');
+    if (suppliedPassword && (suppliedPassword.length < 12 || !/[a-z]/.test(suppliedPassword) || !/[A-Z]/.test(suppliedPassword) || !/\d/.test(suppliedPassword) || !/[^A-Za-z0-9]/.test(suppliedPassword))) throw new HttpError(400, 'weak-partner-password', 'Le mot de passe doit compter au moins 12 caractères avec minuscule, majuscule, chiffre et symbole.');
+    const initialStatus = requestedStatus || 'active';
     let partnerId = clean(payload.partnerId, 40).toUpperCase().replace(/[^A-Z0-9-]/g, '');
     if (!uid) {
       if (partnerId && (await db.collection('healthPartnerLogins').doc(partnerId).get()).exists) throw new HttpError(409, 'partner-id-exists', 'Cet identifiant partenaire existe déjà.');
@@ -1101,9 +1109,9 @@ function buildPartnerResults(sst) {
       authUser = await adminSDK.auth().getUser(uid).catch(() => null);
       if (!authUser) throw new HttpError(404, 'partner-auth-user-not-found', 'Compte Firebase Auth introuvable.');
     } else {
-      temporaryPassword = randomBytes(18).toString('base64url');
+      temporaryPassword = suppliedPassword || randomBytes(18).toString('base64url');
       try {
-        authUser = await adminSDK.auth().createUser({ email: generatedEmail, password: temporaryPassword, displayName: name, emailVerified: false, disabled: false });
+        authUser = await adminSDK.auth().createUser({ email: generatedEmail, password: temporaryPassword, displayName: name, emailVerified: false, disabled: initialStatus !== 'active' });
         uid = authUser.uid;
         createdAuthUser = true;
       } catch (error) {
@@ -1119,13 +1127,21 @@ function buildPartnerResults(sst) {
       if (createdAuthUser) await adminSDK.auth().deleteUser(uid);
       throw new HttpError(400, 'partner-account-type-required', 'Type de compte partenaire invalide.');
     }
-    const services = type === 'mixed' ? ['laboratory', 'imaging'] : [type];
     const timestamp = nowIso();
-    const status = createdAuthUser ? 'active' : String(current.partnerStatus || 'active').toLowerCase();
-    const profile = { ...(current.partnerProfile || {}), businessName: name, responsibleName: clean(payload.responsibleName, 180), email, address, country: clean(payload.country, 100), department: clean(payload.department, 100), commune: clean(payload.commune, 120), phones: Array.isArray(payload.phones) ? payload.phones.map((value) => clean(value, 80)).filter(Boolean).slice(0, 10) : [phone], services, openingHours: payload.openingHours && typeof payload.openingHours === 'object' ? payload.openingHours : {}, additionalInformation: clean(payload.additionalInformation, 1500), administrativeNotes: clean(payload.administrativeNotes, 3000), taxId: clean(payload.taxId, 80), contractDocuments: Array.isArray(current.partnerProfile?.contractDocuments) ? current.partnerProfile.contractDocuments : [], active: status === 'active', createdBy: current.partnerProfile?.createdBy || user.uid, updatedBy: user.uid, createdAt: current.partnerProfile?.createdAt || timestamp, updatedAt: timestamp };
+    const status = requestedStatus || (createdAuthUser ? 'active' : String(current.partnerStatus || 'active').toLowerCase());
+    const services = selectedServices || (type === 'mixed' ? ['laboratory', 'imaging'] : [type]);
+    const profile = { ...(current.partnerProfile || {}), businessName: name, responsibleName: clean(payload.responsibleName, 180), email, address, country: clean(payload.country, 100), department: clean(payload.department, 100), commune: clean(payload.commune, 120), phones: Array.isArray(payload.phones) ? payload.phones.map((value) => clean(value, 80)).filter(Boolean).slice(0, 10) : [phone], services, openingHours: payload.openingHours && typeof payload.openingHours === 'object' ? payload.openingHours : {}, additionalInformation: clean(payload.additionalInformation, 1500), administrativeNotes: clean(payload.administrativeNotes, 3000), taxId: clean(payload.taxId, 80), contractDocuments: Array.isArray(current.partnerProfile?.contractDocuments) ? current.partnerProfile.contractDocuments : [], active: status === 'active', statusReason: statusReason || null, createdBy: current.partnerProfile?.createdBy || user.uid, updatedBy: user.uid, createdAt: current.partnerProfile?.createdAt || timestamp, updatedAt: timestamp };
     try {
       await clientRef.set({ role: typeToRole, partnerStatus: status, partnerType: type, partnerServices: services, partnerProfile: profile, displayName: name, email, phone, updatedAt: timestamp, ...(createdAuthUser ? { partnerId, partnerLoginEmail: generatedEmail } : {}) }, { merge: true });
-      if (createdAuthUser) await db.collection('healthPartnerLogins').doc(partnerId).set({ uid, createdAt: timestamp, active: true });
+      if (createdAuthUser) await db.collection('healthPartnerLogins').doc(partnerId).set({ uid, createdAt: timestamp, active: status === 'active' });
+      else if (suppliedPassword || requestedStatus && requestedStatus !== String(current.partnerStatus || 'active').toLowerCase()) {
+        await adminSDK.auth().updateUser(uid, { ...(suppliedPassword ? { password: suppliedPassword } : {}), ...(requestedStatus ? { disabled: status !== 'active' } : {}) });
+        const updatedAuthUser = await adminSDK.auth().getUser(uid);
+        await adminSDK.auth().setCustomUserClaims(uid, { ...(updatedAuthUser.customClaims || {}), healthPartner: status === 'active', healthPartnerType: type, healthPartnerStatus: status });
+        if (status !== 'active') await adminSDK.auth().revokeRefreshTokens(uid);
+        const existingPartnerId = clean(current.partnerId || authUser.customClaims?.healthPartnerId, 40);
+        if (requestedStatus && existingPartnerId) await db.collection('healthPartnerLogins').doc(existingPartnerId).set({ uid, active: status === 'active', updatedAt: timestamp }, { merge: true });
+      }
       const claims = { ...(authUser.customClaims || {}), healthPartner: status === 'active', healthPartnerId: partnerId || authUser.customClaims?.healthPartnerId || null, healthPartnerType: type, healthPartnerStatus: status, ...(createdAuthUser ? { healthPartnerMustChangePassword: true } : {}) };
       await adminSDK.auth().setCustomUserClaims(uid, claims);
       await audit(user.uid, createdAuthUser ? 'results_partner_account_created' : 'results_partner_profile_updated', `clients/${uid}`, { providerType: type, services });

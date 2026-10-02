@@ -694,12 +694,102 @@ async function updatePartnerStatus(uid, status) {
   const reason = status === 'active' ? '' : prompt(`Motif de ${label} (minimum 5 caractères) :`); if (status !== 'active' && (!reason || reason.trim().length < 5)) return;
   try { await call('healthAdminSetResultsPartnerStatus', { method: 'POST', body: { uid, status, reason } }); await loadAdminPartners(); } catch (error) { showNotice(error.message, 'error'); }
 }
+const legacyPartnerDays = [['monday', 'Lundi'], ['tuesday', 'Mardi'], ['wednesday', 'Mercredi'], ['thursday', 'Jeudi'], ['friday', 'Vendredi'], ['saturday', 'Samedi'], ['sunday', 'Dimanche']];
+const legacyPhoneCountryCodes = ['+509', '+1', '+33', '+44', '+34', '+55', '+57', '+590', '+596'];
+function legacyAddPartnerPhone(value = '') {
+  const root = byId('pr-partner-phone-list'); const countryCode = phoneCountryCodes.find((code) => value.startsWith(code)) || '+509';
+  const number = value.startsWith(countryCode) ? value.slice(countryCode.length).trim() : value; const row = document.createElement('div'); row.className = 'pr-phone-row';
+  const country = document.createElement('select'); country.setAttribute('aria-label', 'Indicatif pays'); phoneCountryCodes.forEach((code) => country.add(new Option(code, code, false, code === countryCode)));
+  const input = document.createElement('input'); input.type = 'tel'; input.name = 'phoneNumbers'; input.autocomplete = 'tel'; input.maxLength = 30; input.placeholder = 'Numéro de téléphone'; input.value = number; input.required = !root.children.length;
+  const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'pr-icon-remove'; remove.setAttribute('aria-label', 'Supprimer ce numéro'); remove.textContent = '♜';
+  remove.addEventListener('click', () => { if (root.children.length > 1) row.remove(); }); row.append(country, input, remove); root.append(row);
+}
+function legacyAddPartnerHourInterval(day, interval = { open: '08:00', close: '17:00' }) {
+  const root = byId('pr-hours-' + day); if (!root) return; const row = document.createElement('div'); row.className = 'pr-hour-row';
+  const open = document.createElement('input'); open.type = 'time'; open.dataset.hourOpen = ''; open.setAttribute('aria-label', 'Heure d’ouverture ' + day); open.value = interval.open || '';
+  const separator = document.createElement('span'); separator.textContent = 'à';
+  const close = document.createElement('input'); close.type = 'time'; close.dataset.hourClose = ''; close.setAttribute('aria-label', 'Heure de fermeture ' + day); close.value = interval.close || '';
+  const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'pr-icon-remove'; remove.setAttribute('aria-label', 'Supprimer cette plage horaire'); remove.textContent = '♜'; remove.addEventListener('click', () => { if (root.children.length > 1) row.remove(); });
+  row.append(open, separator, close, remove); root.append(row);
+}
+function legacyInitializePartnerSchedule() {
+  const daysRoot = byId('pr-partner-days'); const hoursRoot = byId('pr-partner-hours'); if (!daysRoot || !hoursRoot || daysRoot.children.length) return;
+  daysRoot.innerHTML = partnerDays.map(([day, label]) => '<label class="pr-day-chip"><input type="checkbox" name="day-' + day + '" checked><span>' + label + '</span></label>').join('');
+  hoursRoot.innerHTML = partnerDays.map(([day, label]) => '<section class="pr-day-hours"><label class="pr-day-name"><input type="checkbox" name="hours-enabled-' + day + '" checked aria-label="Activer ' + label + '"><span>' + label + '</span></label><div class="pr-hour-intervals" id="pr-hours-' + day + '"></div><button type="button" class="pr-add-interval" data-add-interval="' + day + '" aria-label="Ajouter un horaire ' + label + '">＋</button></section>').join('');
+  partnerDays.forEach(([day]) => addPartnerHourInterval(day));
+  $$('[data-add-interval]').forEach((button) => button.addEventListener('click', () => addPartnerHourInterval(button.dataset.addInterval)));
+  partnerDays.forEach(([day]) => { const dayInput = daysRoot.querySelector('[name="day-' + day + '"]'); const hourInput = hoursRoot.querySelector('[name="hours-enabled-' + day + '"]'); dayInput.addEventListener('change', () => { hourInput.checked = dayInput.checked; }); hourInput.addEventListener('change', () => { dayInput.checked = hourInput.checked; }); });
+}
+function resetPartnerFormExtras() {
+  const phones = byId('pr-partner-phone-list'); phones.replaceChildren(); addPartnerPhone(); addPartnerPhone();
+  byId('pr-partner-days').replaceChildren(); byId('pr-partner-hours').replaceChildren(); initializePartnerSchedule();
+  byId('pr-created-date').value = 'Générée automatiquement'; byId('pr-created-credentials').replaceChildren();
+  const form = byId('pr-create-partner'); form.querySelector('[name="services"][value="laboratory"]').checked = true; form.querySelector('[name="services"][value="imaging"]').checked = false; form.querySelector('[name="services"][value="mixed"]').checked = false; form.querySelector('[name="status"][value="active"]').checked = true; form.dataset.existingStatus = '';
+}
+function legacySetupPartnerForm() {
+  initializePartnerSchedule(); addPartnerPhone(); addPartnerPhone();
+  partnerDays.forEach(([day]) => ['open', 'close'].forEach((part) => { const name = part + '-' + day; if (!byId('pr-create-partner').elements[name]) { const input = document.createElement('input'); input.type = 'hidden'; input.name = name; byId('pr-create-partner').append(input); } }));
+  byId('pr-add-partner-phone').addEventListener('click', () => addPartnerPhone());
+  byId('pr-generate-partner-password').addEventListener('click', () => { const groups = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnopqrstuvwxyz', '23456789', '!@#$%']; const alphabet = groups.join(''); const bytes = crypto.getRandomValues(new Uint32Array(24)); const chars = groups.map((group, index) => group[bytes[index] % group.length]); for (let index = groups.length; index < 24; index += 1) chars.push(alphabet[bytes[index] % alphabet.length]); for (let index = chars.length - 1; index > 0; index -= 1) { const swap = bytes[index] % (index + 1); [chars[index], chars[swap]] = [chars[swap], chars[index]]; } const input = byId('pr-create-partner').elements.initialPassword; input.value = chars.join(''); input.type = 'text'; input.focus(); });
+  $('.pr-password-reveal').addEventListener('click', () => { const input = byId('pr-create-partner').elements.initialPassword; input.type = input.type === 'password' ? 'text' : 'password'; });
+  $$('input[name="services"]', byId('pr-create-partner')).forEach((input) => input.addEventListener('change', () => { const mixed = byId('pr-create-partner').querySelector('[name="services"][value="mixed"]'); if (input.value === 'mixed' && input.checked) $$('input[name="services"]', byId('pr-create-partner')).filter((item) => item !== mixed).forEach((item) => { item.checked = false; }); else if (input.checked) mixed.checked = false; }));
+  byId('pr-cancel-partner-create').addEventListener('click', () => byId('pr-nav').querySelector('[data-module-target="admin-partners"]')?.click());
+}
+const partnerDays = [['monday', 'Lundi'], ['tuesday', 'Mardi'], ['wednesday', 'Mercredi'], ['thursday', 'Jeudi'], ['friday', 'Vendredi'], ['saturday', 'Samedi'], ['sunday', 'Dimanche']];
+const phoneCountryCodes = ['+509', '+1', '+33', '+44', '+34', '+55', '+57', '+590', '+596'];
+const phoneCountryLabels = { '+509': '🇭🇹 +509', '+1': '🇺🇸 +1', '+33': '🇫🇷 +33', '+44': '🇬🇧 +44', '+34': '🇪🇸 +34', '+55': '🇧🇷 +55', '+57': '🇨🇴 +57', '+590': '🇬🇵 +590', '+596': '🇲🇶 +596' };
+function addPartnerPhone(value = '') {
+  const root = byId('pr-partner-phone-list'); const countryCode = phoneCountryCodes.find((code) => value.startsWith(code)) || '+509';
+  const number = value.startsWith(countryCode) ? value.slice(countryCode.length).trim() : value; const row = document.createElement('div'); row.className = 'pr-phone-row';
+  row.innerHTML = `<label class="pr-phone-country"><span class="pr-sr-only">Indicatif pays</span><select aria-label="Indicatif pays">${phoneCountryCodes.map((code) => `<option value="${code}"${code === countryCode ? ' selected' : ''}>${phoneCountryLabels[code]}</option>`).join('')}</select></label><label class="pr-phone-number"><span class="pr-sr-only">Numéro de téléphone</span><input type="tel" name="phoneNumbers" autocomplete="tel" maxlength="30" placeholder="Numéro de téléphone" value="${escapeHtml(number)}" ${root.children.length ? '' : 'required'}></label><button type="button" class="pr-icon-remove" aria-label="Supprimer ce numéro">♜</button>`;
+  row.querySelector('.pr-icon-remove').addEventListener('click', () => { if (root.children.length > 1) row.remove(); }); root.append(row);
+}
+function addPartnerHourInterval(day, interval = { open: '08:00', close: '17:00' }) {
+  const root = byId(`pr-hours-${day}`); if (!root) return; const row = document.createElement('div'); row.className = 'pr-hour-row';
+  row.innerHTML = `<input type="time" data-hour-open aria-label="Heure d’ouverture ${day}" value="${escapeHtml(interval.open || '')}"><span>à</span><input type="time" data-hour-close aria-label="Heure de fermeture ${day}" value="${escapeHtml(interval.close || '')}"><button type="button" class="pr-icon-remove" aria-label="Supprimer cette plage horaire">♜</button>`;
+  row.querySelector('.pr-icon-remove').addEventListener('click', () => { if (root.children.length > 1) row.remove(); }); root.append(row);
+}
+function initializePartnerSchedule() {
+  const daysRoot = byId('pr-partner-days'); const hoursRoot = byId('pr-partner-hours'); if (!daysRoot || !hoursRoot || daysRoot.children.length) return;
+  daysRoot.innerHTML = partnerDays.map(([day, label]) => `<label class="pr-day-chip"><input type="checkbox" name="day-${day}" checked><span>${label}</span></label>`).join('');
+  hoursRoot.innerHTML = partnerDays.map(([day, label]) => `<section class="pr-day-hours" data-day-hours="${day}"><label class="pr-day-name"><input type="checkbox" name="hours-enabled-${day}" checked aria-label="Activer ${label}"><span>${label}</span></label><div class="pr-hour-intervals" id="pr-hours-${day}"></div><button type="button" class="pr-add-interval" data-add-interval="${day}" aria-label="Ajouter un horaire ${label}">＋</button></section>`).join('');
+  partnerDays.forEach(([day]) => addPartnerHourInterval(day));
+  $$('[data-add-interval]').forEach((button) => button.addEventListener('click', () => addPartnerHourInterval(button.dataset.addInterval)));
+  partnerDays.forEach(([day]) => { const days = daysRoot.querySelector(`[name="day-${day}"]`); const hours = hoursRoot.querySelector(`[name="hours-enabled-${day}"]`); days.addEventListener('change', () => { hours.checked = days.checked; }); hours.addEventListener('change', () => { days.checked = hours.checked; }); });
+}
+function setupPartnerForm() {
+  initializePartnerSchedule(); addPartnerPhone(); addPartnerPhone();
+  byId('pr-add-partner-phone').addEventListener('click', () => addPartnerPhone());
+  byId('pr-generate-partner-password').addEventListener('click', () => { const groups = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnopqrstuvwxyz', '23456789', '!@#$%']; const alphabet = groups.join(''); const bytes = crypto.getRandomValues(new Uint32Array(24)); const chars = groups.map((group, index) => group[bytes[index] % group.length]); for (let index = groups.length; index < 24; index += 1) chars.push(alphabet[bytes[index] % alphabet.length]); for (let index = chars.length - 1; index > 0; index -= 1) { const swap = bytes[index] % (index + 1); [chars[index], chars[swap]] = [chars[swap], chars[index]]; } const input = byId('pr-create-partner').elements.initialPassword; input.value = chars.join(''); input.type = 'text'; input.focus(); });
+  $('.pr-password-reveal').addEventListener('click', (event) => { const input = byId('pr-create-partner').elements.initialPassword; input.type = input.type === 'password' ? 'text' : 'password'; event.currentTarget.setAttribute('aria-label', input.type === 'password' ? 'Afficher le mot de passe' : 'Masquer le mot de passe'); });
+  $$('input[name="services"]', byId('pr-create-partner')).forEach((input) => input.addEventListener('change', () => { const mixed = $('#pr-create-partner [name="services"][value="mixed"]'); if (input.value === 'mixed' && input.checked) $$('input[name="services"]', byId('pr-create-partner')).filter((item) => item !== mixed).forEach((item) => { item.checked = false; }); else if (input.checked) mixed.checked = false; }));
+  byId('pr-cancel-partner-create').addEventListener('click', () => byId('pr-nav').querySelector('[data-module-target="admin-partners"]')?.click());
+}
+function populatePartnerFormExtras(partner, form) {
+  const phoneList = byId('pr-partner-phone-list'); phoneList.replaceChildren(); (partner.phones || []).slice(0, 10).forEach((phone) => addPartnerPhone(phone)); if (!phoneList.children.length) addPartnerPhone();
+  const selected = partner.services || (partner.providerType === 'mixed' ? ['laboratory', 'imaging'] : [partner.providerType]);
+  $$('input[name="services"]', form).forEach((input) => { input.checked = input.value === 'mixed' ? selected.includes('laboratory') && selected.includes('imaging') : selected.includes(input.value) && selected.length < 2; });
+  const status = form.querySelector('[name="status"][value="' + (partner.status || 'active') + '"]'); if (status) status.checked = true;
+  form.dataset.existingStatus = partner.status || 'active'; byId('pr-partner-days').replaceChildren(); byId('pr-partner-hours').replaceChildren(); initializePartnerSchedule();
+  partnerDays.forEach(([day]) => { const hours = partner.openingHours?.[day] || {}; const enabled = hours.enabled === true; form.querySelector('[name="day-' + day + '"]').checked = enabled; form.querySelector('[name="hours-enabled-' + day + '"]').checked = enabled; const root = byId('pr-hours-' + day); root.replaceChildren(); const intervals = Array.isArray(hours.intervals) ? hours.intervals : hours.open && hours.close ? [{ open: hours.open, close: hours.close }] : []; (intervals.length ? intervals : [{ open: '08:00', close: '17:00' }]).forEach((interval) => addPartnerHourInterval(day, interval)); });
+  byId('pr-created-date').value = partner.createdAt ? new Date(partner.createdAt).toLocaleDateString('fr-HT') : 'Générée automatiquement';
+}
 async function createPartner(event) {
-  event.preventDefault(); const htmlForm = event.currentTarget; const form = new FormData(htmlForm); const contractFiles = form.getAll('contractDocuments').filter((file) => file instanceof File && file.size); const payload = Object.fromEntries([...form.entries()].filter(([key]) => key !== 'contractDocuments')); payload.phones = String(payload.phones || '').split(',').map((item) => item.trim()).filter(Boolean); payload.openingHours = {};
+  event.preventDefault(); const htmlForm = event.currentTarget; const form = new FormData(htmlForm); const contractFiles = form.getAll('contractDocuments').filter((file) => file instanceof File && file.size); const services = form.getAll('services');
+  if (!services.length) return showStatus('pr-create-status', 'Sélectionnez au moins un service autorisé.', 'error');
+  const phoneNumbers = $$('#pr-partner-phone-list .pr-phone-row').map((row) => `${row.querySelector('select').value} ${row.querySelector('input').value.trim()}`).filter((value) => !/^\+\d+\s*$/.test(value));
+  if (!phoneNumbers.length) return showStatus('pr-create-status', 'Ajoutez au moins un numéro de téléphone.', 'error');
+  const status = form.get('status') || 'active'; let reason = '';
+  if (status !== 'active' && status !== htmlForm.dataset.existingStatus) { reason = prompt(`Motif de ${status === 'disabled' ? 'désactivation' : 'suspension'} du partenaire (minimum 5 caractères) :`) || ''; if (reason.trim().length < 5) return showStatus('pr-create-status', 'Un motif d’au moins 5 caractères est requis pour un compte suspendu ou désactivé.', 'error'); }
+  const payload = Object.fromEntries([...form.entries()].filter(([key]) => !['contractDocuments', 'services', 'status', 'initialPassword'].includes(key) && !key.startsWith('day-') && !key.startsWith('hours-enabled-')));
+  payload.phones = phoneNumbers.slice(0, 10); payload.phone = phoneNumbers[0]; payload.services = services.includes('mixed') ? ['laboratory', 'imaging'] : services; payload.providerType = payload.services.length > 1 ? 'mixed' : payload.services[0]; payload.status = status; payload.reason = reason.trim();
+  const initialPassword = String(form.get('initialPassword') || '');
+  if (initialPassword && (initialPassword.length < 12 || !/[a-z]/.test(initialPassword) || !/[A-Z]/.test(initialPassword) || !/\d/.test(initialPassword) || !/[^A-Za-z0-9]/.test(initialPassword))) return showStatus('pr-create-status', 'Le mot de passe doit compter au moins 12 caractères avec minuscule, majuscule, chiffre et symbole.', 'error');
+  if (initialPassword) payload.initialPassword = initialPassword; payload.openingHours = {};
   if (contractFiles.length > 20 || contractFiles.some((file) => file.size > 10 * 1024 * 1024 || !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type))) return showStatus('pr-create-status', 'Choisissez au plus 20 fichiers PDF/JPG/PNG de 10 Mo maximum chacun.', 'error');
-  for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) if (form.has(`day-${day}`)) payload.openingHours[day] = { enabled: true, open: String(form.get(`open-${day}`) || ''), close: String(form.get(`close-${day}`) || '') };
-  for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) { delete payload[`day-${day}`]; delete payload[`open-${day}`]; delete payload[`close-${day}`]; }
+  for (const [day, label] of partnerDays) { if (form.has(`day-${day}`) && form.has(`hours-enabled-${day}`)) { const intervals = $$(`#pr-hours-${day} .pr-hour-row`).map((row) => ({ open: row.querySelector('[data-hour-open]').value, close: row.querySelector('[data-hour-close]').value })).filter((item) => item.open && item.close); if (!intervals.length) return showStatus('pr-create-status', `Indiquez au moins une plage horaire valide pour ${label}.`, 'error'); payload.openingHours[day] = { enabled: true, open: intervals[0].open, close: intervals.at(-1).close, intervals }; } else payload.openingHours[day] = { enabled: false, intervals: [] }; }
   try {
+    const saveButton = byId('pr-save-partner'); saveButton.disabled = true; saveButton.textContent = payload.uid ? 'Enregistrement…' : 'Création…';
     const response = await call('healthAdminCreateResultsPartner', { method: 'POST', body: payload });
     const partnerUid = response.partner.uid;
     if (contractFiles.length) {
@@ -714,20 +804,33 @@ async function createPartner(event) {
     }
     showStatus('pr-create-status', `${payload.uid ? 'Profil partenaire modifié.' : 'Compte partenaire créé.'}${contractFiles.length ? ` ${contractFiles.length} justificatif(s) privé(s) ajouté(s).` : ''}`, 'success');
     byId('pr-created-credentials').innerHTML = `<div class="pr-summary"><b>ID Partenaire</b>: ${escapeHtml(response.partner.partnerId || '—')}${response.partner.temporaryPassword ? `<br><b>Mot de passe temporaire</b>: <code>${escapeHtml(response.partner.temporaryPassword)}</code><p>Copiez-le maintenant et remettez-le au partenaire par un canal sûr.</p>` : ''}</div>`;
-    htmlForm.reset(); htmlForm.elements.uid.value = ''; byId('pr-partner-form-title').textContent = 'Créer un partenaire'; await loadAdminPartners();
+    htmlForm.reset(); htmlForm.elements.uid.value = ''; byId('pr-partner-form-title').textContent = 'Créer un partenaire'; resetPartnerFormExtras(); await loadAdminPartners();
   } catch (error) { showStatus('pr-create-status', error.message, 'error'); }
+  finally { const saveButton = byId('pr-save-partner'); saveButton.disabled = false; saveButton.innerHTML = '<span aria-hidden="true">▣</span> Créer le partenaire'; }
 }
 async function openPartnerContractDocument(uid, documentId) {
   const tab = window.open('', '_blank', 'noopener');
   try { const response = await call('healthAdminGetResultsPartnerContractDocumentUrl', { query: { uid, documentId } }); if (tab) tab.location = response.url; else window.location.assign(response.url); }
   catch (error) { tab?.close(); showNotice(error.message, 'error'); }
 }
-function editPartner(uid) {
+function editPartnerLegacy(uid) {
   const partner = state.partners.find((item) => item.uid === uid); if (!partner) return;
   const form = byId('pr-create-partner'); const fields = form.elements;
   for (const [name, value] of Object.entries({ uid, name: partner.name, responsibleName: partner.responsibleName, email: partner.email, phone: (partner.phones || [])[0] || '', phones: (partner.phones || []).slice(1).join(', '), address: partner.address, country: partner.country, department: partner.department, commune: partner.commune, taxId: partner.taxId, providerType: partner.providerType, additionalInformation: partner.additionalInformation, administrativeNotes: partner.administrativeNotes, contractPaths: (partner.contractPaths || []).join('\n') })) if (fields[name]) fields[name].value = value || '';
   for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) { const hours = partner.openingHours?.[day] || {}; fields[`day-${day}`].checked = hours.enabled === true; fields[`open-${day}`].value = hours.open || ''; fields[`close-${day}`].value = hours.close || ''; }
+  populatePartnerFormExtras(partner, form);
   byId('pr-partner-form-title').textContent = `Modifier · ${partner.name}`; form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function editPartner(uid) {
+  const partner = state.partners.find((item) => item.uid === uid); if (!partner) return;
+  byId('pr-nav').querySelector('[data-module-target="admin-create-partner"]')?.click();
+  const form = byId('pr-create-partner'); const fields = form.elements;
+  for (const [name, value] of Object.entries({ uid, name: partner.name, responsibleName: partner.responsibleName, email: partner.email, address: partner.address, country: partner.country || 'Haïti', department: partner.department, commune: partner.commune, taxId: partner.taxId, additionalInformation: partner.additionalInformation, administrativeNotes: partner.administrativeNotes })) if (fields[name]) fields[name].value = value || '';
+  if (fields.initialPassword) fields.initialPassword.value = '';
+  populatePartnerFormExtras(partner, form); byId('pr-created-credentials').replaceChildren();
+  byId('pr-partner-form-title').textContent = 'Modifier · ' + partner.name;
+  byId('pr-save-partner').innerHTML = '<span aria-hidden="true">▣</span> Enregistrer les modifications';
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 byId('pr-login-form').addEventListener('submit', async (event) => {
@@ -761,6 +864,7 @@ byId('pr-create-settlement').addEventListener('click', createPartnerSettlement);
 byId('pr-overview-range').addEventListener('change', (event) => loadAdminOverview(Number(event.currentTarget.value)));
 ['pr-filter-partner', 'pr-filter-exam', 'pr-filter-status', 'pr-filter-type', 'pr-filter-payment', 'pr-filter-from', 'pr-filter-to'].forEach((id) => byId(id).addEventListener('change', () => loadAdminResults()));
 byId('pr-filter-search').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); loadAdminResults(); } });
+setupPartnerForm();
 byId('pr-create-partner').addEventListener('submit', createPartner);
 byId('pr-partner-report-form').addEventListener('submit', loadPartnerReport);
 byId('pr-requirements-form').addEventListener('submit', saveRequirements);

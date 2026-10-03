@@ -7,6 +7,7 @@ const REGION = 'us-central1';
 const API = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/`;
 const embeddedAdminRequested = new URLSearchParams(window.location.search).get('embedded') === 'admin';
 const embeddedAdminContext = embeddedAdminRequested && window.parent !== window;
+const embeddedParentOrigin = new URLSearchParams(window.location.search).get('parentOrigin') || '';
 if (embeddedAdminContext) {
   document.body.classList.add('pr-embedded-admin');
 }
@@ -183,6 +184,64 @@ async function initUser(user) {
     showStatus('pr-login-status', `Accès Partenaires réservé aux administrateurs autorisés : ${error.message}`, 'error');
     return;
   }
+  setMode('admin');
+  byId('pr-identity').textContent = 'Smart Cut Health · Administration';
+  await Promise.all([loadAdminOverview(), loadAdminResults(), loadAdminPartners(), loadAdminRequirements(), loadAdminSettlements(), loadAdminAudit(), loadAdminAlerts()]);
+}
+function decodeIdTokenClaims(idToken) {
+  const encoded = String(idToken || '').split('.')[1];
+  if (!encoded) throw new Error('Jeton administrateur invalide.');
+  const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(decodeURIComponent(Array.from(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')))
+    .map((character) => `%${character.charCodeAt(0).toString(16).padStart(2, '0')}`).join('')));
+}
+function requestEmbeddedAdminToken() {
+  if (!embeddedAdminContext || !embeddedParentOrigin) return Promise.reject(new Error('Ouvrez ce module depuis le dashboard administrateur.'));
+  let target;
+  try { target = new URL(embeddedParentOrigin); } catch { return Promise.reject(new Error('Origine du dashboard invalide.')); }
+  if (target.protocol !== 'https:' || target.origin !== embeddedParentOrigin) return Promise.reject(new Error('Origine du dashboard non sécurisée.'));
+  const requestId = crypto.randomUUID();
+  return new Promise((resolve, reject) => {
+    const finish = (callback, value) => { clearTimeout(timeout); window.removeEventListener('message', receive); callback(value); };
+    const receive = (event) => {
+      if (event.origin !== target.origin || event.source !== window.parent) return;
+      const message = event.data;
+      if (message?.type !== 'smartcut-health-admin-auth-token' || message.requestId !== requestId) return;
+      if (!message.token) return finish(reject, new Error(message.error || 'Session administrateur introuvable. Reconnectez-vous au dashboard.'));
+      finish(resolve, message.token);
+    };
+    const timeout = setTimeout(() => finish(reject, new Error('Le dashboard ne répond pas. Rechargez le module partenaire.')), 12000);
+    window.addEventListener('message', receive);
+    window.parent.postMessage({ type: 'smartcut-health-admin-auth-request', requestId, parentOrigin: target.origin }, target.origin);
+  });
+}
+async function initEmbeddedAdmin() {
+  let cachedToken = await requestEmbeddedAdminToken();
+  let claims = decodeIdTokenClaims(cachedToken);
+  if (!claims.sub || !claims.exp || claims.exp * 1000 <= Date.now()) throw new Error('La session administrateur a expiré. Reconnectez-vous au dashboard.');
+  const uid = claims.user_id || claims.sub;
+  const user = {
+    uid,
+    email: claims.email || '',
+    getIdToken: async (forceRefresh = false) => {
+      if (forceRefresh || claims.exp * 1000 <= Date.now() + 90000) {
+        const refreshedToken = await requestEmbeddedAdminToken();
+        const refreshedClaims = decodeIdTokenClaims(refreshedToken);
+        if ((refreshedClaims.user_id || refreshedClaims.sub) !== uid) throw new Error('Le compte du dashboard a changé. Rechargez le module.');
+        cachedToken = refreshedToken;
+        claims = refreshedClaims;
+        state.token = { claims };
+      }
+      return cachedToken;
+    }
+  };
+  state.user = user;
+  state.token = { claims };
+  state.role = claims.role || claims.platformRole || '';
+  await call('healthAdminGetPartnerResultsOverview');
+  byId('pr-login').hidden = true;
+  byId('pr-app').hidden = false;
+  document.documentElement.classList.remove('pr-embedded-admin-pending');
   setMode('admin');
   byId('pr-identity').textContent = 'Smart Cut Health · Administration';
   await Promise.all([loadAdminOverview(), loadAdminResults(), loadAdminPartners(), loadAdminRequirements(), loadAdminSettlements(), loadAdminAudit(), loadAdminAlerts()]);
@@ -973,5 +1032,21 @@ byId('pr-req-type').addEventListener('change', syncRequirementCategories); syncR
 $$('#pr-review-form [data-review]').forEach((button) => button.addEventListener('click', () => state.activeResult && reviewResult(state.activeResult.id, button.dataset.review)));
 byId('pr-logout').addEventListener('click', () => signOut(auth));
 
-await authReadyPromise;
-if (auth.currentUser) await initUser(auth.currentUser);
+if (embeddedAdminContext) {
+  byId('pr-login').hidden = false;
+  byId('pr-app').hidden = true;
+  byId('pr-login-form').hidden = true;
+  showStatus('pr-login-status', 'Connexion sécurisée au dashboard administrateur…');
+  try {
+    await initEmbeddedAdmin();
+  } catch (error) {
+    document.documentElement.classList.remove('pr-embedded-admin-pending');
+    byId('pr-login').hidden = false;
+    byId('pr-app').hidden = true;
+    byId('pr-login-form').hidden = true;
+    showStatus('pr-login-status', `La session du dashboard n’a pas pu être vérifiée : ${error.message}`, 'error');
+  }
+} else {
+  await authReadyPromise;
+  if (auth.currentUser) await initUser(auth.currentUser);
+}

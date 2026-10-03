@@ -71,7 +71,7 @@ test('partner directory matches the reference layout and only renders live API p
   assert.match(script, /data-partner-action="report"/);
   assert.match(css, /\.pr-partner-summary\{display:grid;grid-template-columns:repeat\(4/);
   assert.match(css, /\.pr-partner-table\{width:100%;min-width:/);
-  assert.match(css, /body\.pr-embedded-admin \.pr-topbar\{display:flex!important;inset:0!important/);
+  assert.match(css, /body\.pr-embedded-admin #pr-admin-topbar\{display:none!important\}/);
   assert.match(html, /data-parent-health-module="partners"/);
 });
 
@@ -91,6 +91,14 @@ test('embedded admin chrome fills the parent viewport and can switch Smart Cut H
   assert.match(script, /parentOrigin[\s\S]*postMessage\(\{ type: 'smartcut-health-module-switch'/);
   assert.match(script, /document\.body\.classList\.add\('pr-embedded-admin'\)/);
   assert.match(script, /byId\('pr-overview-range'\)\.addEventListener\('change'/);
+});
+
+test('embedded admin reuses the authenticated dashboard session without exposing partner login', () => {
+  assert.match(html, /pr-embedded-admin-pending/);
+  assert.match(script, /smartcut-health-admin-auth-request/);
+  assert.match(script, /event\.origin !== target\.origin \|\| event\.source !== window\.parent/);
+  assert.match(script, /await call\('healthAdminGetPartnerResultsOverview'\);[\s\S]*setMode\('admin'\)/);
+  assert.match(script, /getIdToken: async \(forceRefresh = false\)/);
 });
 
 test('overview API queries the fields used to count active partners and returns real dashboard rows', () => {

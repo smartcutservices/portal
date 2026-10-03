@@ -16,7 +16,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const state = { user: null, token: null, mode: null, lookup: null, results: [], corrections: [], orders: [], partners: [], partnersLoaded: false, partnerPage: 1, settlements: [], partnerAudit: [], adminAudit: [], activeResult: null, overview: null, loginAuditRecorded: false, partnerAuditCursor: null, partnerAuditHasMore: false, adminCursor: null, adminHasMore: false, partnerOrderCursor: null, partnerOrderHasMore: false, partnerResultCursor: null, partnerResultHasMore: false, correctionCursor: null, correctionsHasMore: false, settlementCursor: null, settlementsHasMore: false };
 const PARTNER_GEO_MANUAL = '__manual__';
-const partnerGeographyPromise = fetch('./health-partner-geography.json').then((response) => {
+const partnerGeographyPromise = fetch('./health-partner-geography.json?v=20261003-us-territories-1').then((response) => {
   if (!response.ok) throw new Error('Répertoire géographique indisponible.');
   return response.json();
 }).catch((error) => { console.error('Chargement du répertoire géographique impossible:', error); return {}; });

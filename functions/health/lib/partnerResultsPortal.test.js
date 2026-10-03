@@ -80,6 +80,7 @@ test('partner creation has complete cascading country, region, and commune data 
   }
   assert.match(script, /populatePartnerLocation\(\{ country: country\.value \}\)/);
   assert.match(script, /populatePartnerPlaces\(country\.value, region\.value\)/);
+  assert.match(script, /health-partner-geography\.json\?v=20261003-us-territories-1/);
   assert.match(script, /form\.get\('country'\) === 'Autre'/);
   assert.match(script, /form\.get\('department'\) === PARTNER_GEO_MANUAL/);
   assert.match(script, /form\.get\('commune'\) === PARTNER_GEO_MANUAL/);

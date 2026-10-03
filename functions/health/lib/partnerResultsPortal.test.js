@@ -68,6 +68,10 @@ test('partner creation has complete cascading country, region, and commune data 
   assert.equal(Object.keys(geography['République dominicaine']).length, 31);
   assert.equal(Object.keys(geography['États-Unis']).length, 66);
   assert.equal(Object.keys(geography.Canada).length, 13);
+  for (const territory of ['American Samoa', 'Guam', 'Northern Mariana Islands', 'United States Virgin Islands']) {
+    assert.ok(geography['États-Unis'][territory].length > 0, `${territory} needs a populated locality dropdown`);
+  }
+  assert.match(geography._metadata.usTerritorySource, /U\.S\. Census Bureau TIGERweb/);
   assert.ok(Object.values(geography['République dominicaine']).every((places) => places.length > 0));
   assert.ok(Object.values(geography.Canada).every((places) => places.length > 0));
   assert.ok(Object.values(geography['États-Unis']).filter((places) => places.length).length > 50);

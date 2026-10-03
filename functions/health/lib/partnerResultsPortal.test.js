@@ -10,6 +10,7 @@ const html = fs.readFileSync(path.join(projectRoot, 'health-partner-results.html
 const script = fs.readFileSync(path.join(projectRoot, 'health-partner-results.js'), 'utf8');
 const api = fs.readFileSync(path.join(projectRoot, 'functions/health/partnerResults.js'), 'utf8');
 const css = fs.readFileSync(path.join(projectRoot, 'health-partner-results.css'), 'utf8');
+const geography = JSON.parse(fs.readFileSync(path.join(projectRoot, 'health-partner-geography.json'), 'utf8'));
 
 test('partner results page declares every static element used by its controller', () => {
   const htmlIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
@@ -58,6 +59,27 @@ test('partner creation reproduces the full two-column reference form and require
   assert.match(api, /const services = selectedServices \|\|/);
   assert.match(api, /requestedStatus !== previousStatus && statusReason\.length < 5/);
   assert.match(api, /statusReason: statusChanged \? statusReason \|\| null : current\.partnerProfile\?\.statusReason/);
+});
+
+test('partner creation has complete cascading country, region, and commune data with manual fallbacks', () => {
+  assert.deepEqual(Object.keys(geography).filter((key) => key !== '_metadata'), ['Haïti', 'République dominicaine', 'États-Unis', 'Canada']);
+  assert.equal(Object.values(geography['Haïti']).reduce((sum, places) => sum + places.length, 0), 149);
+  assert.ok(Object.values(geography['Haïti']).every((places) => new Set(places).size === places.length));
+  assert.equal(Object.keys(geography['République dominicaine']).length, 31);
+  assert.equal(Object.keys(geography['États-Unis']).length, 66);
+  assert.equal(Object.keys(geography.Canada).length, 13);
+  assert.ok(Object.values(geography['République dominicaine']).every((places) => places.length > 0));
+  assert.ok(Object.values(geography.Canada).every((places) => places.length > 0));
+  assert.ok(Object.values(geography['États-Unis']).filter((places) => places.length).length > 50);
+  for (const id of ['pr-partner-country', 'pr-partner-department', 'pr-partner-commune', 'pr-partner-country-manual', 'pr-partner-department-manual', 'pr-partner-commune-manual']) {
+    assert.ok(html.includes(`id="${id}"`), `missing cascading location control ${id}`);
+  }
+  assert.match(script, /populatePartnerLocation\(\{ country: country\.value \}\)/);
+  assert.match(script, /populatePartnerPlaces\(country\.value, region\.value\)/);
+  assert.match(script, /form\.get\('country'\) === 'Autre'/);
+  assert.match(script, /form\.get\('department'\) === PARTNER_GEO_MANUAL/);
+  assert.match(script, /form\.get\('commune'\) === PARTNER_GEO_MANUAL/);
+  assert.match(css, /\.pr-address-grid \[hidden\]\{display:none!important\}/);
 });
 
 test('partner directory matches the reference layout and only renders live API partner data', () => {

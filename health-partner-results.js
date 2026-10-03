@@ -15,6 +15,11 @@ const byId = (id) => document.getElementById(id);
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const state = { user: null, token: null, mode: null, lookup: null, results: [], corrections: [], orders: [], partners: [], partnersLoaded: false, partnerPage: 1, settlements: [], partnerAudit: [], adminAudit: [], activeResult: null, overview: null, loginAuditRecorded: false, partnerAuditCursor: null, partnerAuditHasMore: false, adminCursor: null, adminHasMore: false, partnerOrderCursor: null, partnerOrderHasMore: false, partnerResultCursor: null, partnerResultHasMore: false, correctionCursor: null, correctionsHasMore: false, settlementCursor: null, settlementsHasMore: false };
+const PARTNER_GEO_MANUAL = '__manual__';
+const partnerGeographyPromise = fetch('./health-partner-geography.json').then((response) => {
+  if (!response.ok) throw new Error('Répertoire géographique indisponible.');
+  return response.json();
+}).catch((error) => { console.error('Chargement du répertoire géographique impossible:', error); return {}; });
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 const legacyContractsField = document.querySelector('#pr-create-partner [name="contractPaths"]')?.closest('label');
@@ -25,6 +30,125 @@ function showNotice(message, kind = '') {
 }
 function showStatus(id, message, kind = '') {
   const node = byId(id); node.textContent = message; node.className = `pr-status ${kind}`;
+}
+function normalizeLocationName(value = '') {
+  return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function setManualLocationField(select, selectLabel, input, inputLabel, manual, required) {
+  selectLabel.hidden = manual;
+  select.hidden = manual;
+  select.disabled = manual;
+  select.required = !manual && required;
+  inputLabel.hidden = !manual;
+  input.disabled = !manual;
+  input.required = manual && required;
+  if (!manual) input.value = '';
+}
+function setLocationSelect(select, placeholder, values) {
+  select.replaceChildren(new Option(placeholder, ''));
+  values.forEach((value) => select.add(new Option(value, value)));
+  select.add(new Option('Ma localité n’est pas dans la liste…', PARTNER_GEO_MANUAL));
+  select.disabled = false;
+}
+async function populatePartnerLocation(partner = {}) {
+  const geography = await partnerGeographyPromise;
+  const country = byId('pr-partner-country');
+  const countryManual = byId('pr-partner-country-manual');
+  const countryManualLabel = byId('pr-partner-country-manual-label');
+  const requestedCountry = String(partner.country || 'Haïti').trim();
+  const matchingCountry = [...country.options].find((option) => normalizeLocationName(option.value) === normalizeLocationName(requestedCountry) || (normalizeLocationName(requestedCountry) === 'haiti' && option.value === 'Haïti'));
+  const countryValue = matchingCountry?.value || (requestedCountry === 'Autre' ? 'Autre' : 'Autre');
+  country.value = countryValue;
+  const countryIsManual = countryValue === 'Autre';
+  countryManualLabel.hidden = !countryIsManual;
+  countryManual.disabled = !countryIsManual;
+  countryManual.required = countryIsManual;
+  countryManual.value = countryIsManual && requestedCountry !== 'Autre' ? requestedCountry : String(partner.countryManual || '');
+  const regionNames = Object.keys(geography[countryValue] || {}).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  const regionSelect = byId('pr-partner-department');
+  const regionSelectLabel = byId('pr-partner-department-label');
+  const regionManual = byId('pr-partner-department-manual');
+  const regionManualLabel = byId('pr-partner-department-manual-label');
+  const placeSelect = byId('pr-partner-commune');
+  const placeSelectLabel = byId('pr-partner-commune-label');
+  const placeManual = byId('pr-partner-commune-manual');
+  const placeManualLabel = byId('pr-partner-commune-manual-label');
+  const regionLabel = byId('pr-partner-region-label');
+  const placeLabel = byId('pr-partner-place-label');
+  const regionLabelByCountry = { 'Haïti': 'Département', 'République dominicaine': 'Province', 'États-Unis': 'État / territoire', Canada: 'Province / territoire' };
+  const placeLabelByCountry = { 'Haïti': 'Commune', 'République dominicaine': 'Commune / municipalité', 'États-Unis': 'Ville / localité', Canada: 'Ville / municipalité' };
+  regionLabel.textContent = regionLabelByCountry[countryValue] || 'Département / état';
+  placeLabel.textContent = placeLabelByCountry[countryValue] || 'Commune / ville';
+  if (!regionNames.length) {
+    setManualLocationField(regionSelect, regionSelectLabel, regionManual, regionManualLabel, true, true);
+    regionManual.value = partner.department || '';
+    setManualLocationField(placeSelect, placeSelectLabel, placeManual, placeManualLabel, true, true);
+    placeManual.value = partner.commune || '';
+    return;
+  }
+  regionSelectLabel.hidden = false;
+  regionSelect.hidden = false;
+  regionSelect.disabled = false;
+  regionSelect.required = true;
+  regionManualLabel.hidden = true;
+  regionManual.disabled = true;
+  regionManual.required = false;
+  setLocationSelect(regionSelect, `Sélectionner · ${regionLabel.textContent.toLocaleLowerCase('fr')}`, regionNames);
+  const wantedRegion = String(partner.department || '');
+  const regionValue = regionNames.find((name) => normalizeLocationName(name) === normalizeLocationName(wantedRegion));
+  if (regionValue) {
+    regionSelect.value = regionValue;
+    await populatePartnerPlaces(countryValue, regionValue, partner.commune || '');
+  } else if (wantedRegion) {
+    regionSelect.value = PARTNER_GEO_MANUAL;
+    setManualLocationField(regionSelect, regionSelectLabel, regionManual, regionManualLabel, true, true);
+    regionManual.value = wantedRegion;
+    setManualLocationField(placeSelect, placeSelectLabel, placeManual, placeManualLabel, true, true);
+    placeManual.value = partner.commune || '';
+  } else {
+    setManualLocationField(placeSelect, placeSelectLabel, placeManual, placeManualLabel, false, true);
+    placeSelect.replaceChildren(new Option('Sélectionnez d’abord un département / état', ''));
+    placeSelect.disabled = true;
+  }
+}
+async function populatePartnerPlaces(country, region, selectedPlace = '') {
+  const geography = await partnerGeographyPromise;
+  const placeSelect = byId('pr-partner-commune');
+  const placeSelectLabel = byId('pr-partner-commune-label');
+  const placeManual = byId('pr-partner-commune-manual');
+  const placeManualLabel = byId('pr-partner-commune-manual-label');
+  if (!region) {
+    setManualLocationField(placeSelect, placeSelectLabel, placeManual, placeManualLabel, false, true);
+    placeSelect.replaceChildren(new Option('Sélectionnez d’abord un département / état', ''));
+    placeSelect.disabled = true;
+    return;
+  }
+  if (!country || region === PARTNER_GEO_MANUAL) {
+    setManualLocationField(placeSelect, placeSelectLabel, placeManual, placeManualLabel, true, true);
+    placeManual.value = selectedPlace;
+    return;
+  }
+  const places = geography[country]?.[region] || [];
+  if (!places.length) {
+    setManualLocationField(placeSelect, placeSelectLabel, placeManual, placeManualLabel, true, true);
+    placeManual.value = selectedPlace;
+    return;
+  }
+  placeSelectLabel.hidden = false;
+  placeSelect.hidden = false;
+  placeSelect.disabled = false;
+  placeSelect.required = true;
+  placeManualLabel.hidden = true;
+  placeManual.disabled = true;
+  placeManual.required = false;
+  setLocationSelect(placeSelect, `Sélectionner · ${byId('pr-partner-place-label').textContent.toLocaleLowerCase('fr')}`, places);
+  const matchingPlace = places.find((name) => normalizeLocationName(name) === normalizeLocationName(selectedPlace));
+  if (matchingPlace) placeSelect.value = matchingPlace;
+  else if (selectedPlace) {
+    placeSelect.value = PARTNER_GEO_MANUAL;
+    setManualLocationField(placeSelect, placeSelectLabel, placeManual, placeManualLabel, true, true);
+    placeManual.value = selectedPlace;
+  }
 }
 async function call(name, { method = 'GET', body, query = {} } = {}) {
   if (!state.user) throw new Error('Connectez-vous pour continuer.');
@@ -857,6 +981,7 @@ function resetPartnerFormExtras() {
   byId('pr-partner-days').replaceChildren(); byId('pr-partner-hours').replaceChildren(); initializePartnerSchedule();
   byId('pr-created-date').value = 'Générée automatiquement'; byId('pr-created-credentials').replaceChildren();
   const form = byId('pr-create-partner'); form.querySelector('[name="services"][value="laboratory"]').checked = true; form.querySelector('[name="services"][value="imaging"]').checked = false; form.querySelector('[name="services"][value="mixed"]').checked = false; form.querySelector('[name="status"][value="active"]').checked = true; form.dataset.existingStatus = '';
+  populatePartnerLocation({ country: 'Haïti' }).catch((error) => showStatus('pr-create-status', error.message, 'error'));
 }
 function legacySetupPartnerForm() {
   initializePartnerSchedule(); addPartnerPhone(); addPartnerPhone();
@@ -895,6 +1020,20 @@ function setupPartnerForm() {
   byId('pr-generate-partner-password').addEventListener('click', () => { const groups = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnopqrstuvwxyz', '23456789', '!@#$%']; const alphabet = groups.join(''); const bytes = crypto.getRandomValues(new Uint32Array(24)); const chars = groups.map((group, index) => group[bytes[index] % group.length]); for (let index = groups.length; index < 24; index += 1) chars.push(alphabet[bytes[index] % alphabet.length]); for (let index = chars.length - 1; index > 0; index -= 1) { const swap = bytes[index] % (index + 1); [chars[index], chars[swap]] = [chars[swap], chars[index]]; } const input = byId('pr-create-partner').elements.initialPassword; input.value = chars.join(''); input.type = 'text'; input.focus(); });
   $('.pr-password-reveal').addEventListener('click', (event) => { const input = byId('pr-create-partner').elements.initialPassword; input.type = input.type === 'password' ? 'text' : 'password'; event.currentTarget.setAttribute('aria-label', input.type === 'password' ? 'Afficher le mot de passe' : 'Masquer le mot de passe'); });
   $$('input[name="services"]', byId('pr-create-partner')).forEach((input) => input.addEventListener('change', () => { const mixed = $('#pr-create-partner [name="services"][value="mixed"]'); if (input.value === 'mixed' && input.checked) $$('input[name="services"]', byId('pr-create-partner')).filter((item) => item !== mixed).forEach((item) => { item.checked = false; }); else if (input.checked) mixed.checked = false; }));
+  const country = byId('pr-partner-country'); const region = byId('pr-partner-department'); const place = byId('pr-partner-commune');
+  country.addEventListener('change', () => populatePartnerLocation({ country: country.value }).catch((error) => showStatus('pr-create-status', error.message, 'error')));
+  region.addEventListener('change', () => {
+    const manual = region.value === PARTNER_GEO_MANUAL;
+    const regionManual = byId('pr-partner-department-manual');
+    setManualLocationField(region, byId('pr-partner-department-label'), regionManual, byId('pr-partner-department-manual-label'), manual, true);
+    if (!manual) regionManual.value = '';
+    populatePartnerPlaces(country.value, region.value).catch((error) => showStatus('pr-create-status', error.message, 'error'));
+  });
+  place.addEventListener('change', () => {
+    const manual = place.value === PARTNER_GEO_MANUAL;
+    setManualLocationField(place, byId('pr-partner-commune-label'), byId('pr-partner-commune-manual'), byId('pr-partner-commune-manual-label'), manual, true);
+  });
+  populatePartnerLocation({ country: country.value }).catch((error) => showStatus('pr-create-status', error.message, 'error'));
   byId('pr-cancel-partner-create').addEventListener('click', () => byId('pr-nav').querySelector('[data-module-target="admin-partners"]')?.click());
 }
 function populatePartnerFormExtras(partner, form) {
@@ -913,7 +1052,11 @@ async function createPartner(event) {
   if (!phoneNumbers.length) return showStatus('pr-create-status', 'Ajoutez au moins un numéro de téléphone.', 'error');
   const status = form.get('status') || 'active'; let reason = '';
   if (status !== 'active' && status !== htmlForm.dataset.existingStatus) { reason = prompt(`Motif de ${status === 'disabled' ? 'désactivation' : 'suspension'} du partenaire (minimum 5 caractères) :`) || ''; if (reason.trim().length < 5) return showStatus('pr-create-status', 'Un motif d’au moins 5 caractères est requis pour un compte suspendu ou désactivé.', 'error'); }
-  const payload = Object.fromEntries([...form.entries()].filter(([key]) => !['contractDocuments', 'services', 'status', 'initialPassword'].includes(key) && !key.startsWith('day-') && !key.startsWith('hours-enabled-')));
+  const payload = Object.fromEntries([...form.entries()].filter(([key]) => !['contractDocuments', 'services', 'status', 'initialPassword', 'countryManual', 'departmentManual', 'communeManual'].includes(key) && !key.startsWith('day-') && !key.startsWith('hours-enabled-')));
+  payload.country = form.get('country') === 'Autre' ? String(form.get('countryManual') || '').trim() : form.get('country');
+  payload.department = form.get('department') === PARTNER_GEO_MANUAL ? String(form.get('departmentManual') || '').trim() : form.get('department');
+  payload.commune = form.get('commune') === PARTNER_GEO_MANUAL ? String(form.get('communeManual') || '').trim() : form.get('commune');
+  if (!payload.country || !payload.department || !payload.commune) return showStatus('pr-create-status', 'Sélectionnez ou saisissez le pays, le département / état et la commune / ville.', 'error');
   payload.phones = phoneNumbers.slice(0, 10); payload.phone = phoneNumbers[0]; payload.services = services.includes('mixed') ? ['laboratory', 'imaging'] : services; payload.providerType = payload.services.length > 1 ? 'mixed' : payload.services[0]; payload.status = status; payload.reason = reason.trim();
   const initialPassword = String(form.get('initialPassword') || '');
   if (initialPassword && (initialPassword.length < 12 || !/[a-z]/.test(initialPassword) || !/[A-Z]/.test(initialPassword) || !/\d/.test(initialPassword) || !/[^A-Za-z0-9]/.test(initialPassword))) return showStatus('pr-create-status', 'Le mot de passe doit compter au moins 12 caractères avec minuscule, majuscule, chiffre et symbole.', 'error');
@@ -951,6 +1094,7 @@ function editPartnerLegacy(uid) {
   for (const [name, value] of Object.entries({ uid, name: partner.name, responsibleName: partner.responsibleName, email: partner.email, phone: (partner.phones || [])[0] || '', phones: (partner.phones || []).slice(1).join(', '), address: partner.address, country: partner.country, department: partner.department, commune: partner.commune, taxId: partner.taxId, providerType: partner.providerType, additionalInformation: partner.additionalInformation, administrativeNotes: partner.administrativeNotes, contractPaths: (partner.contractPaths || []).join('\n') })) if (fields[name]) fields[name].value = value || '';
   for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) { const hours = partner.openingHours?.[day] || {}; fields[`day-${day}`].checked = hours.enabled === true; fields[`open-${day}`].value = hours.open || ''; fields[`close-${day}`].value = hours.close || ''; }
   populatePartnerFormExtras(partner, form);
+  populatePartnerLocation(partner).catch((error) => showStatus('pr-create-status', error.message, 'error'));
   byId('pr-partner-form-title').textContent = `Modifier · ${partner.name}`; form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function editPartner(uid) {
@@ -960,6 +1104,7 @@ function editPartner(uid) {
   for (const [name, value] of Object.entries({ uid, name: partner.name, responsibleName: partner.responsibleName, email: partner.email, address: partner.address, country: partner.country || 'Haïti', department: partner.department, commune: partner.commune, taxId: partner.taxId, additionalInformation: partner.additionalInformation, administrativeNotes: partner.administrativeNotes })) if (fields[name]) fields[name].value = value || '';
   if (fields.initialPassword) fields.initialPassword.value = '';
   populatePartnerFormExtras(partner, form); byId('pr-created-credentials').replaceChildren();
+  populatePartnerLocation(partner).catch((error) => showStatus('pr-create-status', error.message, 'error'));
   byId('pr-partner-form-title').textContent = 'Modifier · ' + partner.name;
   byId('pr-save-partner').innerHTML = '<span aria-hidden="true">▣</span> Enregistrer les modifications';
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });

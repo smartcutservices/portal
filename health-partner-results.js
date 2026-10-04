@@ -236,37 +236,13 @@ function setMode(mode) {
   };
   $$('#pr-nav button[data-module-target]').forEach((button) => button.addEventListener('click', () => { activate(button.dataset.moduleTarget); closeMenu(); }));
   activate(modules[0][1]);
-  const moduleSwitcher = byId('pr-module-switcher');
-  const moduleDialog = byId('pr-module-dialog');
-  if (moduleSwitcher) moduleSwitcher.hidden = !(mode === 'admin' && embeddedAdminContext);
   const notificationButton = byId('pr-notifications-button');
   if (notificationButton) notificationButton.hidden = !(mode === 'admin' && embeddedAdminContext);
   const adminLogout = byId('pr-admin-logout');
   if (adminLogout) adminLogout.hidden = !(mode === 'admin' && embeddedAdminContext);
   if (mode === 'admin' && embeddedAdminContext) {
-    moduleSwitcher?.addEventListener('click', () => moduleDialog?.showModal());
     adminLogout?.addEventListener('click', () => signOut(auth));
-    notificationButton?.addEventListener('click', () => { moduleDialog?.close(); nav.querySelector('[data-module-target="admin-alerts"]')?.click(); });
-    moduleDialog?.querySelectorAll('[data-parent-health-module]').forEach((button) => button.addEventListener('click', () => {
-      const module = button.dataset.parentHealthModule;
-      if (!['pharmacy', 'laboratory', 'imaging', 'medical', 'partners'].includes(module)) return;
-      const parentOrigin = new URLSearchParams(location.search).get('parentOrigin');
-      if (embeddedAdminContext && parentOrigin && window.parent !== window) window.parent.postMessage({ type: 'smartcut-health-module-switch', module }, parentOrigin);
-      moduleDialog.close();
-    }));
-    byId('pr-global-search')?.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      if (byId('pr-workspace').dataset.activeModule === 'admin-partners') {
-        byId('pr-partner-search').value = event.currentTarget.value.trim();
-        state.partnerPage = 1;
-        renderAdminPartners();
-        return;
-      }
-      const input = byId('pr-filter-search');
-      if (input) input.value = event.currentTarget.value.trim();
-      nav.querySelector('[data-module-target="admin-results"]')?.click();
-    });
+    notificationButton?.addEventListener('click', () => nav.querySelector('[data-module-target="admin-alerts"]')?.click());
     $$('[data-open-module]').forEach((button) => button.addEventListener('click', () => nav.querySelector(`[data-module-target="${button.dataset.openModule}"]`)?.click()));
   }
 }

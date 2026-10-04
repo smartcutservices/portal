@@ -312,6 +312,13 @@ async function initUser(user) {
   byId('pr-identity').textContent = 'Smart Cut Health · Administration';
   await Promise.all([loadAdminOverview(), loadAdminResults(), loadAdminPartners(), loadAdminRequirements(), loadAdminSettlements(), loadAdminAudit(), loadAdminAlerts()]);
 }
+async function reconnectPartnerWithPassword(password) {
+  const email = auth.currentUser?.email || state.user?.email;
+  if (!email) throw new Error('E-mail du compte partenaire introuvable. Reconnectez-vous avec vos nouveaux identifiants.');
+  await signOut(auth);
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+  await initUser(credential.user);
+}
 function decodeIdTokenClaims(idToken) {
   const encoded = String(idToken || '').split('.')[1];
   if (!encoded) throw new Error('Jeton administrateur invalide.');
@@ -1167,14 +1174,35 @@ byId('pr-login-form').addEventListener('submit', async (event) => {
 byId('pr-password-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const password = byId('pr-new-password').value;
   if (password.length < 12 || password.length > 128 || password !== byId('pr-confirm-password').value) { showStatus('pr-password-status', 'Utilisez au moins 12 caractères (une phrase facile à retenir convient) et vérifiez que les deux saisies sont identiques.', 'error'); return; }
-  try { await call('healthPartnerCompletePasswordChange', { method: 'POST', body: { newPassword: password } }); await state.user.getIdToken(true); byId('pr-password-change').hidden = true; await initUser(state.user); }
-  catch (error) { showStatus('pr-password-status', error.message || 'Mise à jour impossible. Reconnectez-vous puis réessayez.', 'error'); }
+  try {
+    await call('healthPartnerCompletePasswordChange', { method: 'POST', body: { newPassword: password } });
+  } catch (error) {
+    showStatus('pr-password-status', error.message || 'Mise à jour impossible. Reconnectez-vous puis réessayez.', 'error');
+    return;
+  }
+  try {
+    await reconnectPartnerWithPassword(password);
+    byId('pr-password-form').reset();
+  } catch (error) {
+    showStatus('pr-password-status', `Mot de passe mis à jour. Reconnectez-vous avec votre nouveau mot de passe. ${error.message || ''}`, 'error');
+  }
 });
 byId('pr-security-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const form = event.currentTarget; const password = form.elements.password.value;
   if (password.length < 12 || password.length > 128 || password !== form.elements.confirmation.value) return showStatus('pr-security-status', 'Utilisez au moins 12 caractères (une phrase facile à retenir convient) et vérifiez que les deux saisies sont identiques.', 'error');
-  try { await call('healthPartnerCompletePasswordChange', { method: 'POST', body: { newPassword: password } }); await state.user.getIdToken(true); form.reset(); showStatus('pr-security-status', 'Mot de passe mis à jour.', 'success'); }
-  catch (error) { showStatus('pr-security-status', error.message || 'Mise à jour impossible. Reconnectez-vous puis réessayez.', 'error'); }
+  try {
+    await call('healthPartnerCompletePasswordChange', { method: 'POST', body: { newPassword: password } });
+  } catch (error) {
+    showStatus('pr-security-status', error.message || 'Mise à jour impossible. Reconnectez-vous puis réessayez.', 'error');
+    return;
+  }
+  try {
+    await reconnectPartnerWithPassword(password);
+    form.reset();
+    showStatus('pr-security-status', 'Mot de passe mis à jour.', 'success');
+  } catch (error) {
+    showStatus('pr-security-status', `Mot de passe mis à jour. Reconnectez-vous avec votre nouveau mot de passe. ${error.message || ''}`, 'error');
+  }
 });
 byId('pr-lookup-form').addEventListener('submit', async (event) => { event.preventDefault(); byId('pr-upload-card').hidden = true; try { await doLookup(byId('pr-order-id').value.trim()); showNotice('Commande vérifiée. Confirmez les informations avant tout envoi.', 'success'); } catch (error) { showNotice(error.message, 'error'); } });
 byId('pr-upload-form').addEventListener('submit', (event) => submitResult(event, 'partner'));

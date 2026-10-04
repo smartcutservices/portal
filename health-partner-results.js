@@ -943,7 +943,7 @@ async function saveRequirements(event) {
 }
 async function resetPartner(uid) {
   if (!confirm('Générer un mot de passe temporaire ? Il ne sera affiché qu’une fois.')) return;
-  try { const response = await call('healthAdminResetResultsPartnerAccess', { method: 'POST', body: { uid } }); byId('pr-created-credentials').innerHTML = `<div class="pr-summary"><b>Identifiant</b>: ${escapeHtml(response.partnerId)}<br><b>Mot de passe temporaire</b>: <code>${escapeHtml(response.temporaryPassword)}</code><p>Transmettez-le directement au partenaire par un canal sûr.</p></div>`; } catch (error) { showNotice(error.message, 'error'); }
+  try { const response = await call('healthAdminResetResultsPartnerAccess', { method: 'POST', body: { uid } }); byId('pr-created-credentials').innerHTML = `<div class="pr-summary"><b>E-mail de connexion</b>: ${escapeHtml(response.loginEmail)}<br><b>ID partenaire (support)</b>: ${escapeHtml(response.partnerId)}<br><b>Nouveau mot de passe temporaire</b>: <code>${escapeHtml(response.temporaryPassword)}</code><p>Remettez ces identifiants au partenaire par un canal sûr. Il devra changer le mot de passe à sa première connexion.</p></div>`; } catch (error) { showNotice(error.message, 'error'); }
 }
 async function updatePartnerStatus(uid, status) {
   const label = status === 'disabled' ? 'désactivation' : 'suspension';
@@ -1078,7 +1078,7 @@ async function createPartner(event) {
       await call('healthAdminSaveResultsPartnerContractDocuments', { method: 'POST', body: { uid: partnerUid, documents } });
     }
     showStatus('pr-create-status', `${payload.uid ? 'Profil partenaire modifié.' : 'Compte partenaire créé.'}${contractFiles.length ? ` ${contractFiles.length} justificatif(s) privé(s) ajouté(s).` : ''}`, 'success');
-    byId('pr-created-credentials').innerHTML = `<div class="pr-summary"><b>ID Partenaire</b>: ${escapeHtml(response.partner.partnerId || '—')}${response.partner.temporaryPassword ? `<br><b>Mot de passe temporaire</b>: <code>${escapeHtml(response.partner.temporaryPassword)}</code><p>Copiez-le maintenant et remettez-le au partenaire par un canal sûr.</p>` : ''}</div>`;
+    byId('pr-created-credentials').innerHTML = `<div class="pr-summary"><b>E-mail de connexion</b>: ${escapeHtml(response.partner.email || '—')}<br><b>ID partenaire (support)</b>: ${escapeHtml(response.partner.partnerId || '—')}${response.partner.temporaryPassword ? `<br><b>Mot de passe temporaire</b>: <code>${escapeHtml(response.partner.temporaryPassword)}</code><p>Copiez-le maintenant et remettez-le au partenaire par un canal sûr. Il devra le changer à sa première connexion.</p>` : ''}</div>`;
     htmlForm.reset(); htmlForm.elements.uid.value = ''; byId('pr-partner-form-title').textContent = 'Créer un partenaire'; resetPartnerFormExtras(); await loadAdminPartners();
   } catch (error) { showStatus('pr-create-status', error.message, 'error'); }
   finally { const saveButton = byId('pr-save-partner'); saveButton.disabled = false; saveButton.innerHTML = '<span aria-hidden="true">▣</span> Créer le partenaire'; }
@@ -1114,8 +1114,8 @@ byId('pr-login-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const id = byId('pr-login-id').value.trim(); const password = byId('pr-login-password').value;
   const email = id.includes('@') ? id.toLowerCase() : `${id.toLowerCase()}@partners.smartcuthealth.invalid`;
   const messages = {
-    'auth/invalid-credential': 'Identifiant ou mot de passe incorrect. Pour un partenaire, saisissez l’ID SCHP-… remis lors de la création, pas l’e-mail de contact.',
-    'auth/user-not-found': 'Aucun compte trouvé. Vérifiez l’ID SCHP-… fourni lors de la création du partenaire.',
+    'auth/invalid-credential': 'E-mail ou mot de passe incorrect. Utilisez l’adresse e-mail du compte et, si nécessaire, demandez à l’administration de réinitialiser votre accès.',
+    'auth/user-not-found': 'Aucun compte trouvé avec cette adresse e-mail. Vérifiez l’adresse enregistrée par l’administration.',
     'auth/wrong-password': 'Mot de passe incorrect. Utilisez le mot de passe temporaire remis lors de la création ou demandez une réinitialisation à l’administration.',
     'auth/user-disabled': 'Ce compte partenaire est désactivé. Demandez à l’administration de vérifier son statut.',
     'auth/too-many-requests': 'Trop de tentatives. Attendez quelques minutes avant de réessayer.',
@@ -1129,7 +1129,7 @@ byId('pr-login-form').addEventListener('submit', async (event) => {
     await initUser(credential.user);
   } catch (error) {
     console.warn('[Partner portal] Échec de connexion:', error?.code || error?.message || 'unknown');
-    showStatus('pr-login-status', messages[error?.code] || 'Connexion refusée. Vérifiez l’identifiant partenaire et le mot de passe.', 'error');
+    showStatus('pr-login-status', messages[error?.code] || 'Connexion refusée. Vérifiez l’adresse e-mail et le mot de passe.', 'error');
   }
 });
 byId('pr-password-form').addEventListener('submit', async (event) => {

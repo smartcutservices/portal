@@ -1102,7 +1102,7 @@ function buildPartnerResults(sst) {
         if (!(await db.collection('healthPartnerLogins').doc(candidate).get()).exists) partnerId = candidate;
       }
     }
-    const generatedEmail = uid ? '' : `${partnerId.toLowerCase()}@partners.smartcuthealth.invalid`;
+    const loginEmail = email;
     let temporaryPassword = '';
     let authUser;
     let createdAuthUser = false;
@@ -1112,17 +1112,22 @@ function buildPartnerResults(sst) {
     } else {
       temporaryPassword = suppliedPassword || randomBytes(18).toString('base64url');
       try {
-        authUser = await adminSDK.auth().createUser({ email: generatedEmail, password: temporaryPassword, displayName: name, emailVerified: false, disabled: initialStatus !== 'active' });
+        authUser = await adminSDK.auth().createUser({ email: loginEmail, password: temporaryPassword, displayName: name, emailVerified: false, disabled: initialStatus !== 'active' });
         uid = authUser.uid;
         createdAuthUser = true;
       } catch (error) {
-        if (error?.code === 'auth/email-already-exists') throw new HttpError(409, 'partner-id-exists', 'Identifiant partenaire déjà utilisé. Réessayez la création.');
+        if (error?.code === 'auth/email-already-exists') throw new HttpError(409, 'partner-email-already-exists', 'Cette adresse e-mail est déjà utilisée par un compte Firebase. Utilisez une autre adresse ou associez le compte existant.');
         throw error;
       }
     }
     const clientRef = db.collection('clients').doc(uid);
     const snap = await clientRef.get();
     const current = snap.data() || {};
+    const authEmailChanged = !createdAuthUser && authUser.email?.toLowerCase() !== loginEmail;
+    if (authEmailChanged) {
+      const emailOwner = await adminSDK.auth().getUserByEmail(loginEmail).catch((error) => error?.code === 'auth/user-not-found' ? null : Promise.reject(error));
+      if (emailOwner && emailOwner.uid !== uid) throw new HttpError(409, 'partner-email-already-exists', 'Cette adresse e-mail est déjà utilisée par un autre compte Firebase.');
+    }
     const previousStatus = String(current.partnerStatus || 'active').toLowerCase();
     if (uid && requestedStatus && requestedStatus !== 'active' && requestedStatus !== previousStatus && statusReason.length < 5) throw new HttpError(400, 'invalid-partner-status', 'Un motif d’au moins 5 caractères est requis pour suspendre ou désactiver le compte.');
     const typeToRole = type === 'imaging' ? 'imaging' : type === 'laboratory' ? 'laboratory' : current.role || 'health_partner';
@@ -1136,9 +1141,10 @@ function buildPartnerResults(sst) {
     const statusChanged = createdAuthUser ? status !== 'active' : Boolean(requestedStatus && requestedStatus !== previousStatus);
     const profile = { ...(current.partnerProfile || {}), businessName: name, responsibleName: clean(payload.responsibleName, 180), email, address, country: clean(payload.country, 100), department: clean(payload.department, 100), commune: clean(payload.commune, 120), phones: Array.isArray(payload.phones) ? payload.phones.map((value) => clean(value, 80)).filter(Boolean).slice(0, 10) : [phone], services, openingHours: payload.openingHours && typeof payload.openingHours === 'object' ? payload.openingHours : {}, additionalInformation: clean(payload.additionalInformation, 1500), administrativeNotes: clean(payload.administrativeNotes, 3000), taxId: clean(payload.taxId, 80), contractDocuments: Array.isArray(current.partnerProfile?.contractDocuments) ? current.partnerProfile.contractDocuments : [], active: status === 'active', statusReason: statusChanged ? statusReason || null : current.partnerProfile?.statusReason || null, createdBy: current.partnerProfile?.createdBy || user.uid, updatedBy: user.uid, createdAt: current.partnerProfile?.createdAt || timestamp, updatedAt: timestamp };
     try {
-      await clientRef.set({ role: typeToRole, partnerStatus: status, partnerType: type, partnerServices: services, partnerProfile: profile, displayName: name, email, phone, updatedAt: timestamp, ...(createdAuthUser ? { partnerId, partnerLoginEmail: generatedEmail } : {}) }, { merge: true });
+      if (authEmailChanged) authUser = await adminSDK.auth().updateUser(uid, { email: loginEmail });
+      await clientRef.set({ role: typeToRole, partnerStatus: status, partnerType: type, partnerServices: services, partnerProfile: profile, displayName: name, email, phone, updatedAt: timestamp, partnerLoginEmail: loginEmail, ...(createdAuthUser ? { partnerId } : {}) }, { merge: true });
       if (createdAuthUser) await db.collection('healthPartnerLogins').doc(partnerId).set({ uid, createdAt: timestamp, active: status === 'active' });
-      else if (suppliedPassword || requestedStatus && requestedStatus !== String(current.partnerStatus || 'active').toLowerCase()) {
+      else if (authEmailChanged || suppliedPassword || requestedStatus && requestedStatus !== String(current.partnerStatus || 'active').toLowerCase()) {
         await adminSDK.auth().updateUser(uid, { ...(suppliedPassword ? { password: suppliedPassword } : {}), ...(requestedStatus ? { disabled: status !== 'active' } : {}) });
         const updatedAuthUser = await adminSDK.auth().getUser(uid);
         await adminSDK.auth().setCustomUserClaims(uid, { ...(updatedAuthUser.customClaims || {}), healthPartner: status === 'active', healthPartnerType: type, healthPartnerStatus: status });
@@ -1258,15 +1264,31 @@ function buildPartnerResults(sst) {
     const uid = clean(body(req).uid, 200);
     const ref = db.collection('clients').doc(uid);
     const snap = await ref.get();
-    if (!snap.exists || !snap.data()?.partnerProfile || !snap.data()?.partnerId) throw new HttpError(404, 'results-partner-not-found', 'Partenaire avec identifiant de connexion introuvable.');
+    if (!snap.exists || !snap.data()?.partnerProfile) throw new HttpError(404, 'results-partner-not-found', 'Profil partenaire introuvable.');
     if (snap.data()?.partnerStatus !== 'active') throw new HttpError(409, 'partner-not-active', 'Réactivez le partenaire avant de réinitialiser son accès.');
-    const partnerId = snap.data().partnerId;
+    let partnerId = clean(snap.data()?.partnerId, 40).toUpperCase();
+    if (partnerId) {
+      const existingLogin = await db.collection('healthPartnerLogins').doc(partnerId).get();
+      if (existingLogin.exists && existingLogin.data()?.uid !== uid) throw new HttpError(409, 'partner-id-already-assigned', 'L’identifiant partenaire est déjà attribué à un autre compte. Contactez le support.');
+    } else {
+      while (!partnerId) {
+        const candidate = `SCHP-${randomBytes(5).toString('hex').toUpperCase()}`;
+        if (!(await db.collection('healthPartnerLogins').doc(candidate).get()).exists) partnerId = candidate;
+      }
+    }
+    const loginEmail = String(snap.data()?.partnerProfile?.email || snap.data()?.email || '').trim().toLowerCase();
+    if (!loginEmail) throw new HttpError(409, 'partner-email-required', 'Aucune adresse e-mail de connexion n’est enregistrée pour ce partenaire. Modifiez son profil avant de réinitialiser son accès.');
     const temporaryPassword = randomBytes(18).toString('base64url');
     const authUser = await adminSDK.auth().getUser(uid);
-    await adminSDK.auth().updateUser(uid, { password: temporaryPassword, disabled: false });
+    const emailOwner = await adminSDK.auth().getUserByEmail(loginEmail).catch((error) => error?.code === 'auth/user-not-found' ? null : Promise.reject(error));
+    if (emailOwner && emailOwner.uid !== uid) throw new HttpError(409, 'partner-email-already-exists', 'L’e-mail du partenaire est déjà associé à un autre compte Firebase. Résolvez ce doublon avant de réinitialiser l’accès.');
+    await adminSDK.auth().updateUser(uid, { email: loginEmail, password: temporaryPassword, disabled: false });
+    await ref.set({ partnerId, partnerLoginEmail: loginEmail }, { merge: true });
+    await db.collection('healthPartnerLogins').doc(partnerId).set({ uid, active: true, updatedAt: nowIso() }, { merge: true });
+    await adminSDK.auth().revokeRefreshTokens(uid);
     await adminSDK.auth().setCustomUserClaims(uid, { ...(authUser.customClaims || {}), healthPartner: true, healthPartnerId: partnerId, healthPartnerStatus: 'active', healthPartnerMustChangePassword: true });
     await audit(user.uid, 'results_partner_access_reset', `clients/${uid}`, { partnerId });
-    res.status(200).json({ ok: true, partnerId, temporaryPassword });
+    res.status(200).json({ ok: true, partnerId, loginEmail, temporaryPassword });
   }));
 
   const healthPartnerCompletePasswordChange = onRequest({ region }, withErrorHandling(async (req, res) => {

@@ -1113,8 +1113,24 @@ function editPartner(uid) {
 byId('pr-login-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const id = byId('pr-login-id').value.trim(); const password = byId('pr-login-password').value;
   const email = id.includes('@') ? id.toLowerCase() : `${id.toLowerCase()}@partners.smartcuthealth.invalid`;
-  try { showStatus('pr-login-status', 'Connexion…'); const credential = await signInWithEmailAndPassword(auth, email, password); await initUser(credential.user); }
-  catch (error) { showStatus('pr-login-status', error.message || 'Connexion refusée.', 'error'); }
+  const messages = {
+    'auth/invalid-credential': 'Identifiant ou mot de passe incorrect. Pour un partenaire, saisissez l’ID SCHP-… remis lors de la création, pas l’e-mail de contact.',
+    'auth/user-not-found': 'Aucun compte trouvé. Vérifiez l’ID SCHP-… fourni lors de la création du partenaire.',
+    'auth/wrong-password': 'Mot de passe incorrect. Utilisez le mot de passe temporaire remis lors de la création ou demandez une réinitialisation à l’administration.',
+    'auth/user-disabled': 'Ce compte partenaire est désactivé. Demandez à l’administration de vérifier son statut.',
+    'auth/too-many-requests': 'Trop de tentatives. Attendez quelques minutes avant de réessayer.',
+    'auth/network-request-failed': 'Connexion réseau impossible. Vérifiez votre Internet puis réessayez.',
+    'auth/operation-not-allowed': 'La connexion par e-mail et mot de passe est désactivée pour ce projet Firebase.'
+  };
+  try {
+    showStatus('pr-login-status', 'Connexion…');
+    await authReadyPromise;
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    await initUser(credential.user);
+  } catch (error) {
+    console.warn('[Partner portal] Échec de connexion:', error?.code || error?.message || 'unknown');
+    showStatus('pr-login-status', messages[error?.code] || 'Connexion refusée. Vérifiez l’identifiant partenaire et le mot de passe.', 'error');
+  }
 });
 byId('pr-password-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const password = byId('pr-new-password').value;

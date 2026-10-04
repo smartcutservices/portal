@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="./portal-favicon.svg">
   <script>if(new URLSearchParams(location.search).get('embedded')==='admin'&&window.parent!==window)document.documentElement.classList.add('pr-embedded-admin-pending');</script>
   <link rel="stylesheet" href="./site-foundation.css?v=20260929-1">
-  <link rel="stylesheet" href="./health-partner-results.css?v=20261003-partner-credentials-menu-1">
+  <link rel="stylesheet" href="./health-partner-results.css?v=20261003-partner-credentials-menu-2">
 </head>
 <body class="partner-results-page">
   <header class="pr-topbar" id="pr-admin-topbar">
@@ -206,6 +206,6 @@
   <dialog id="pr-partner-credentials-dialog" class="pr-dialog pr-credentials-dialog" aria-labelledby="pr-partner-credentials-title"><form method="dialog"><button class="pr-dialog-close" value="cancel" aria-label="Fermer">×</button><p class="pr-eyebrow">Accès partenaire réinitialisé</p><h2 id="pr-partner-credentials-title">Identifiants temporaires</h2><div id="pr-partner-credentials-content"></div><div class="pr-credential-actions"><button type="button" class="pr-quiet" id="pr-copy-partner-password">Copier le mot de passe</button><button type="submit" class="pr-primary">Terminé</button></div></form></dialog>
 
   <dialog id="pr-review-dialog" class="pr-dialog"><form method="dialog" id="pr-review-form"><button class="pr-dialog-close" value="cancel" aria-label="Fermer">×</button><p class="pr-eyebrow">Revue administrative</p><h2 id="pr-review-title">Résultat</h2><section id="pr-review-summary" class="pr-summary"></section><div id="pr-review-files"></div><section id="pr-result-history" class="pr-list" aria-label="Historique des versions"></section><label>Motif requis pour correction / non réalisé<textarea id="pr-review-reason" rows="3"></textarea></label><div class="pr-actions"><button type="button" data-review="REQUEST_CORRECTION" class="pr-quiet">Demander une correction</button><button type="button" data-review="NOT_PERFORMED" class="pr-quiet">Non réalisé</button><button type="button" data-review="VALIDATE" class="pr-primary">Valider · réalisé</button><button type="button" data-transfer class="pr-primary" hidden>Transférer au patient</button></div></form></dialog>
-  <script type="module" src="./health-partner-results.js?v=20261003-partner-credentials-menu-1"></script>
+  <script type="module" src="./health-partner-results.js?v=20261003-partner-credentials-menu-2"></script>
 </body>
 </html>

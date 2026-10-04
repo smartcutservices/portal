@@ -851,6 +851,21 @@ function renderAdminPartners() {
     return `<tr><td><input type="checkbox" disabled aria-label="Sélectionner ${escapeHtml(partner.name)}"></td><td><div class="pr-partner-name-cell"><span class="pr-partner-type-icon ${typeClass}" aria-hidden="true">${icon}</span><strong>${escapeHtml(partner.name || '—')}</strong></div></td><td><span class="pr-partner-service ${typeClass}">${escapeHtml(partnerServiceLabel(partner))}</span></td><td>${escapeHtml(partner.responsibleName || '—')}</td><td>${escapeHtml((partner.phones || []).filter(Boolean).join(', ') || '—')}</td><td>${escapeHtml(partner.commune || '—')}</td><td><span class="pr-partner-status ${statusKey}"><i></i>${statusText}</span></td><td>${dashboardDate(partner.createdAt)}</td><td><details class="pr-partner-row-menu"><summary aria-label="Actions pour ${escapeHtml(partner.name)}">•••</summary><div class="pr-partner-row-menu-items"><button type="button" data-partner-action="profile" data-partner-uid="${escapeHtml(partner.uid)}">Voir le profil</button><button type="button" data-partner-action="edit" data-partner-uid="${escapeHtml(partner.uid)}">Modifier</button><button type="button" data-partner-action="services" data-partner-uid="${escapeHtml(partner.uid)}">Définir les services autorisés</button>${statusKey === 'active' ? `<button type="button" data-partner-action="status" data-partner-uid="${escapeHtml(partner.uid)}" data-next-status="suspended">Suspendre</button><button type="button" data-partner-action="status" data-partner-uid="${escapeHtml(partner.uid)}" data-next-status="disabled">Désactiver</button>` : `<button type="button" data-partner-action="status" data-partner-uid="${escapeHtml(partner.uid)}" data-next-status="active">Activer le compte</button>`}<button type="button" data-partner-action="reset" data-partner-uid="${escapeHtml(partner.uid)}" ${statusKey !== 'active' ? 'disabled title="Réactivez le compte avant de réinitialiser l’accès"' : ''}>Réinitialiser l’accès</button><button type="button" data-partner-action="results" data-partner-uid="${escapeHtml(partner.uid)}">Voir les résultats déposés</button><button type="button" data-partner-action="report" data-partner-uid="${escapeHtml(partner.uid)}">Voir le rapport du partenaire</button></div></details></td></tr>`;
   }).join('')}</tbody></table>` : `<div class="pr-partner-empty"><strong>${!state.partnersLoaded ? 'Chargement des partenaires…' : partners.length ? 'Aucun partenaire ne correspond aux filtres.' : 'Aucun partenaire enregistré.'}</strong><span>${!state.partnersLoaded ? 'Les données seront affichées dès que le chargement est terminé.' : partners.length ? 'Modifiez les critères de recherche.' : 'Les partenaires créés apparaîtront ici.'}</span></div>`;
   byId('pr-partners-list').innerHTML = table;
+  byId('pr-partners-list').querySelectorAll('.pr-partner-row-menu').forEach((menu) => {
+    menu.addEventListener('toggle', () => {
+      if (!menu.open) return;
+      byId('pr-partners-list').querySelectorAll('.pr-partner-row-menu[open]').forEach((other) => { if (other !== menu) other.open = false; });
+      const trigger = menu.querySelector('summary');
+      const panel = menu.querySelector('.pr-partner-row-menu-items');
+      const anchor = trigger.getBoundingClientRect();
+      const bounds = panel.getBoundingClientRect();
+      const below = window.innerHeight - anchor.bottom;
+      const top = below >= bounds.height + 8 ? anchor.bottom + 5 : Math.max(8, anchor.top - bounds.height - 5);
+      const left = Math.max(8, Math.min(window.innerWidth - bounds.width - 8, anchor.right - bounds.width));
+      panel.style.top = `${top}px`;
+      panel.style.left = `${left}px`;
+    });
+  });
   byId('pr-partner-page-label').textContent = filtered.length ? `Affichage de ${start + 1} à ${Math.min(start + pageSize, filtered.length)} sur ${filtered.length} partenaire${filtered.length === 1 ? '' : 's'}` : '0 partenaire';
   byId('pr-partner-pages').innerHTML = pageCount > 1 ? `<button type="button" data-partner-page="${Math.max(1, state.partnerPage - 1)}" aria-label="Page précédente" ${state.partnerPage === 1 ? 'disabled' : ''}>‹</button>${Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => `<button type="button" data-partner-page="${page}" class="${page === state.partnerPage ? 'active' : ''}" aria-current="${page === state.partnerPage ? 'page' : 'false'}">${page}</button>`).join('')}<button type="button" data-partner-page="${Math.min(pageCount, state.partnerPage + 1)}" aria-label="Page suivante" ${state.partnerPage === pageCount ? 'disabled' : ''}>›</button>` : '';
 }
@@ -943,8 +958,23 @@ async function saveRequirements(event) {
 }
 async function resetPartner(uid) {
   if (!confirm('Générer un mot de passe temporaire ? Il ne sera affiché qu’une fois.')) return;
-  try { const response = await call('healthAdminResetResultsPartnerAccess', { method: 'POST', body: { uid } }); byId('pr-created-credentials').innerHTML = `<div class="pr-summary"><b>E-mail de connexion</b>: ${escapeHtml(response.loginEmail)}<br><b>ID partenaire (support)</b>: ${escapeHtml(response.partnerId)}<br><b>Nouveau mot de passe temporaire</b>: <code>${escapeHtml(response.temporaryPassword)}</code><p>Remettez ces identifiants au partenaire par un canal sûr. Il devra changer le mot de passe à sa première connexion.</p></div>`; } catch (error) { showNotice(error.message, 'error'); }
+  try {
+    const response = await call('healthAdminResetResultsPartnerAccess', { method: 'POST', body: { uid } });
+    showPartnerCredentials({ loginEmail: response.loginEmail, partnerId: response.partnerId, temporaryPassword: response.temporaryPassword });
+  } catch (error) { showNotice(error.message, 'error'); }
 }
+function showPartnerCredentials({ loginEmail, partnerId, temporaryPassword }) {
+  const dialog = byId('pr-partner-credentials-dialog');
+  byId('pr-partner-credentials-content').innerHTML = `<div class="pr-credential-row"><span>E-mail de connexion</span><strong>${escapeHtml(loginEmail || '—')}</strong></div><div class="pr-credential-row"><span>ID partenaire · support</span><strong>${escapeHtml(partnerId || '—')}</strong></div><div class="pr-credential-row pr-credential-password"><span>Mot de passe temporaire</span><code id="pr-temporary-partner-password">${escapeHtml(temporaryPassword || '')}</code></div><p>Le partenaire devra choisir un nouveau mot de passe à sa première connexion.</p>`;
+  dialog.showModal();
+}
+byId('pr-copy-partner-password')?.addEventListener('click', async () => {
+  const password = byId('pr-temporary-partner-password')?.textContent || '';
+  if (!password) return;
+  try { await navigator.clipboard.writeText(password); showNotice('Mot de passe copié.'); }
+  catch { showNotice('Copie impossible sur ce navigateur. Sélectionnez le mot de passe et copiez-le manuellement.', 'error'); }
+});
+byId('pr-partner-credentials-dialog')?.addEventListener('close', () => byId('pr-partner-credentials-content').replaceChildren());
 async function updatePartnerStatus(uid, status) {
   const label = status === 'disabled' ? 'désactivation' : 'suspension';
   const reason = status === 'active' ? '' : prompt(`Motif de ${label} (minimum 5 caractères) :`); if (status !== 'active' && (!reason || reason.trim().length < 5)) return;
@@ -1078,7 +1108,8 @@ async function createPartner(event) {
       await call('healthAdminSaveResultsPartnerContractDocuments', { method: 'POST', body: { uid: partnerUid, documents } });
     }
     showStatus('pr-create-status', `${payload.uid ? 'Profil partenaire modifié.' : 'Compte partenaire créé.'}${contractFiles.length ? ` ${contractFiles.length} justificatif(s) privé(s) ajouté(s).` : ''}`, 'success');
-    byId('pr-created-credentials').innerHTML = `<div class="pr-summary"><b>E-mail de connexion</b>: ${escapeHtml(response.partner.email || '—')}<br><b>ID partenaire (support)</b>: ${escapeHtml(response.partner.partnerId || '—')}${response.partner.temporaryPassword ? `<br><b>Mot de passe temporaire</b>: <code>${escapeHtml(response.partner.temporaryPassword)}</code><p>Copiez-le maintenant et remettez-le au partenaire par un canal sûr. Il devra le changer à sa première connexion.</p>` : ''}</div>`;
+    byId('pr-created-credentials').replaceChildren();
+    if (response.partner.temporaryPassword) showPartnerCredentials({ loginEmail: response.partner.email, partnerId: response.partner.partnerId, temporaryPassword: response.partner.temporaryPassword });
     htmlForm.reset(); htmlForm.elements.uid.value = ''; byId('pr-partner-form-title').textContent = 'Créer un partenaire'; resetPartnerFormExtras(); await loadAdminPartners();
   } catch (error) { showStatus('pr-create-status', error.message, 'error'); }
   finally { const saveButton = byId('pr-save-partner'); saveButton.disabled = false; saveButton.innerHTML = '<span aria-hidden="true">▣</span> Créer le partenaire'; }

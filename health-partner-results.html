@@ -38,10 +38,10 @@
     <section id="pr-password-change" class="pr-login pr-panel" hidden>
       <p class="pr-eyebrow">Première connexion</p>
       <h1>Créer votre mot de passe</h1>
-      <p>Choisissez un mot de passe fort pour sécuriser le compte partenaire.</p>
+      <p>Choisissez une phrase facile à retenir d’au moins 12 caractères. Les majuscules, chiffres et symboles ne sont pas obligatoires.</p>
       <form id="pr-password-form" class="pr-form">
-        <label>Nouveau mot de passe<input id="pr-new-password" type="password" minlength="12" autocomplete="new-password" required></label>
-        <label>Confirmer le mot de passe<input id="pr-confirm-password" type="password" minlength="12" autocomplete="new-password" required></label>
+        <label>Nouveau mot de passe<input id="pr-new-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+        <label>Confirmer le mot de passe<input id="pr-confirm-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
         <button class="pr-primary">Mettre à jour</button>
         <p id="pr-password-status" class="pr-status" role="status"></p>
       </form>
@@ -88,7 +88,7 @@
         <article id="pr-partner-profile-panel" class="pr-panel"><p class="pr-eyebrow">Établissement</p><h2>Mon profil</h2><div id="pr-partner-profile"></div></article>
         <article id="pr-partner-audit-panel" class="pr-panel"><p class="pr-eyebrow">Traçabilité</p><h2>Historique de mes actions</h2><div id="pr-partner-audit" class="pr-list"></div></article>
         <article id="pr-partner-security-panel" class="pr-panel"><p class="pr-eyebrow">Sécurité</p><h2>Modifier mon mot de passe</h2>
-          <form id="pr-security-form" class="pr-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="12" autocomplete="new-password" required></label><label>Confirmer le mot de passe<input name="confirmation" type="password" minlength="12" autocomplete="new-password" required></label><button class="pr-primary">Mettre à jour le mot de passe</button><p id="pr-security-status" class="pr-status" role="status"></p></form>
+          <form id="pr-security-form" class="pr-form"><p>12 caractères minimum; une phrase facile à retenir est acceptée.</p><label>Nouveau mot de passe<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><label>Confirmer le mot de passe<input name="confirmation" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><button class="pr-primary">Mettre à jour le mot de passe</button><p id="pr-security-status" class="pr-status" role="status"></p></form>
         </article>
       </section>
 
@@ -206,6 +206,6 @@
   <dialog id="pr-partner-credentials-dialog" class="pr-dialog pr-credentials-dialog" aria-labelledby="pr-partner-credentials-title"><form method="dialog"><button class="pr-dialog-close" value="cancel" aria-label="Fermer">×</button><p class="pr-eyebrow">Accès partenaire réinitialisé</p><h2 id="pr-partner-credentials-title">Identifiants temporaires</h2><div id="pr-partner-credentials-content"></div><div class="pr-credential-actions"><button type="button" class="pr-quiet" id="pr-copy-partner-password">Copier le mot de passe</button><button type="submit" class="pr-primary">Terminé</button></div></form></dialog>
 
   <dialog id="pr-review-dialog" class="pr-dialog"><form method="dialog" id="pr-review-form"><button class="pr-dialog-close" value="cancel" aria-label="Fermer">×</button><p class="pr-eyebrow">Revue administrative</p><h2 id="pr-review-title">Résultat</h2><section id="pr-review-summary" class="pr-summary"></section><div id="pr-review-files"></div><section id="pr-result-history" class="pr-list" aria-label="Historique des versions"></section><label>Motif requis pour correction / non réalisé<textarea id="pr-review-reason" rows="3"></textarea></label><div class="pr-actions"><button type="button" data-review="REQUEST_CORRECTION" class="pr-quiet">Demander une correction</button><button type="button" data-review="NOT_PERFORMED" class="pr-quiet">Non réalisé</button><button type="button" data-review="VALIDATE" class="pr-primary">Valider · réalisé</button><button type="button" data-transfer class="pr-primary" hidden>Transférer au patient</button></div></form></dialog>
-  <script type="module" src="./health-partner-results.js?v=20261003-partner-credentials-menu-2"></script>
+  <script type="module" src="./health-partner-results.js?v=20261004-partner-passphrase-1"></script>
 </body>
 </html>

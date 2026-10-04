@@ -1090,7 +1090,7 @@ async function createPartner(event) {
   if (!payload.country || !payload.department || !payload.commune) return showStatus('pr-create-status', 'Sélectionnez ou saisissez le pays, le département / état et la commune / ville.', 'error');
   payload.phones = phoneNumbers.slice(0, 10); payload.phone = phoneNumbers[0]; payload.services = services.includes('mixed') ? ['laboratory', 'imaging'] : services; payload.providerType = payload.services.length > 1 ? 'mixed' : payload.services[0]; payload.status = status; payload.reason = reason.trim();
   const initialPassword = String(form.get('initialPassword') || '');
-  if (initialPassword && (initialPassword.length < 12 || !/[a-z]/.test(initialPassword) || !/[A-Z]/.test(initialPassword) || !/\d/.test(initialPassword) || !/[^A-Za-z0-9]/.test(initialPassword))) return showStatus('pr-create-status', 'Le mot de passe doit compter au moins 12 caractères avec minuscule, majuscule, chiffre et symbole.', 'error');
+  if (initialPassword && (initialPassword.length < 12 || initialPassword.length > 128)) return showStatus('pr-create-status', 'Le mot de passe doit compter entre 12 et 128 caractères. Une phrase facile à retenir est acceptée.', 'error');
   if (initialPassword) payload.initialPassword = initialPassword; payload.openingHours = {};
   if (contractFiles.length > 20 || contractFiles.some((file) => file.size > 10 * 1024 * 1024 || !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type))) return showStatus('pr-create-status', 'Choisissez au plus 20 fichiers PDF/JPG/PNG de 10 Mo maximum chacun.', 'error');
   for (const [day, label] of partnerDays) { if (form.has(`day-${day}`) && form.has(`hours-enabled-${day}`)) { const intervals = $$(`#pr-hours-${day} .pr-hour-row`).map((row) => ({ open: row.querySelector('[data-hour-open]').value, close: row.querySelector('[data-hour-close]').value })).filter((item) => item.open && item.close); if (!intervals.length) return showStatus('pr-create-status', `Indiquez au moins une plage horaire valide pour ${label}.`, 'error'); payload.openingHours[day] = { enabled: true, open: intervals[0].open, close: intervals.at(-1).close, intervals }; } else payload.openingHours[day] = { enabled: false, intervals: [] }; }
@@ -1166,13 +1166,13 @@ byId('pr-login-form').addEventListener('submit', async (event) => {
 });
 byId('pr-password-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const password = byId('pr-new-password').value;
-  if (password !== byId('pr-confirm-password').value || password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) { showStatus('pr-password-status', 'Utilisez au moins 12 caractères avec minuscule, majuscule, chiffre et symbole; les deux saisies doivent correspondre.', 'error'); return; }
+  if (password.length < 12 || password.length > 128 || password !== byId('pr-confirm-password').value) { showStatus('pr-password-status', 'Utilisez au moins 12 caractères (une phrase facile à retenir convient) et vérifiez que les deux saisies sont identiques.', 'error'); return; }
   try { await call('healthPartnerCompletePasswordChange', { method: 'POST', body: { newPassword: password } }); await state.user.getIdToken(true); byId('pr-password-change').hidden = true; await initUser(state.user); }
   catch (error) { showStatus('pr-password-status', error.message || 'Mise à jour impossible. Reconnectez-vous puis réessayez.', 'error'); }
 });
 byId('pr-security-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const form = event.currentTarget; const password = form.elements.password.value;
-  if (password.length < 12 || password !== form.elements.confirmation.value || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) return showStatus('pr-security-status', 'Utilisez au moins 12 caractères avec minuscule, majuscule, chiffre et symbole; les deux saisies doivent correspondre.', 'error');
+  if (password.length < 12 || password.length > 128 || password !== form.elements.confirmation.value) return showStatus('pr-security-status', 'Utilisez au moins 12 caractères (une phrase facile à retenir convient) et vérifiez que les deux saisies sont identiques.', 'error');
   try { await call('healthPartnerCompletePasswordChange', { method: 'POST', body: { newPassword: password } }); await state.user.getIdToken(true); form.reset(); showStatus('pr-security-status', 'Mot de passe mis à jour.', 'success'); }
   catch (error) { showStatus('pr-security-status', error.message || 'Mise à jour impossible. Reconnectez-vous puis réessayez.', 'error'); }
 });

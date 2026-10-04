@@ -1092,7 +1092,7 @@ function buildPartnerResults(sst) {
     if (selectedServices && (!selectedServices.length || selectedServices.some((service) => !['laboratory', 'imaging'].includes(service)) || (type === 'mixed') !== (selectedServices.length === 2) || type !== (selectedServices.length === 2 ? 'mixed' : selectedServices[0]))) throw new HttpError(400, 'invalid-partner-services', 'Sélectionnez des services autorisés valides.');
     if (requestedStatus && !['active', 'suspended', 'disabled'].includes(requestedStatus)) throw new HttpError(400, 'invalid-partner-status', 'Statut invalide.');
     if (requestedStatus && requestedStatus !== 'active' && !uid && statusReason.length < 5) throw new HttpError(400, 'invalid-partner-status', 'Un motif d’au moins 5 caractères est requis pour suspendre ou désactiver le compte.');
-    if (suppliedPassword && (suppliedPassword.length < 12 || !/[a-z]/.test(suppliedPassword) || !/[A-Z]/.test(suppliedPassword) || !/\d/.test(suppliedPassword) || !/[^A-Za-z0-9]/.test(suppliedPassword))) throw new HttpError(400, 'weak-partner-password', 'Le mot de passe doit compter au moins 12 caractères avec minuscule, majuscule, chiffre et symbole.');
+    if (suppliedPassword && (suppliedPassword.length < 12 || suppliedPassword.length > 128)) throw new HttpError(400, 'weak-partner-password', 'Le mot de passe doit compter entre 12 et 128 caractères.');
     const initialStatus = requestedStatus || 'active';
     let partnerId = clean(payload.partnerId, 40).toUpperCase().replace(/[^A-Z0-9-]/g, '');
     if (!uid) {
@@ -1296,7 +1296,7 @@ function buildPartnerResults(sst) {
     const user = await requireBearerUser(req, { verifyBearerUser: verifyBearer });
     const password = String(body(req).newPassword || '');
     if (!isStrongPartnerPassword(password)) {
-      throw new HttpError(400, 'weak-partner-password', 'Utilisez au moins 12 caractères avec une minuscule, une majuscule, un chiffre et un symbole.');
+      throw new HttpError(400, 'weak-partner-password', 'Utilisez entre 12 et 128 caractères. Une phrase facile à retenir est acceptée.');
     }
     const snap = await db.collection('clients').doc(user.uid).get();
     const profile = snap.data() || {};
